@@ -91,11 +91,11 @@ st.markdown("""
     .tv-header-container {
         background: linear-gradient(135deg, #001f3f 0%, #003366 50%, #004080 100%);
         border-bottom: 4px solid #FFB800;
-        padding: 24px 32px;
+        padding: 22px 28px;
         border-radius: 12px;
         color: #ffffff;
         box-shadow: 0 8px 24px rgba(0, 51, 102, 0.25);
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -118,7 +118,7 @@ st.markdown("""
         100% { opacity: 1; transform: scale(1); }
     }
     .tv-header-title {
-        font-size: 28px;
+        font-size: 26px;
         font-weight: 800;
         color: #ffffff;
         margin: 0;
@@ -126,18 +126,18 @@ st.markdown("""
         text-shadow: 0 2px 4px rgba(0,0,0,0.4);
     }
     .tv-header-subtitle {
-        font-size: 16px;
+        font-size: 15px;
         color: #FFD166;
         font-weight: 600;
-        margin-top: 6px;
+        margin-top: 4px;
     }
 
     /* Card Panels */
     .broadcast-card-header {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 700;
         color: #003366;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -152,7 +152,7 @@ st.markdown("""
         font-weight: 700;
         border: 1px solid #002244;
         border-radius: 8px;
-        padding: 10px 24px;
+        padding: 10px 20px;
         transition: all 0.25s ease;
         box-shadow: 0 4px 8px rgba(0, 51, 102, 0.2);
         width: 100%;
@@ -163,6 +163,40 @@ st.markdown("""
         color: #FFD166;
         box-shadow: 0 6px 14px rgba(0, 51, 102, 0.35);
         transform: translateY(-1px);
+    }
+    
+    /* Social Buttons */
+    .social-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 16px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none !important;
+        color: #ffffff !important;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .social-btn:hover {
+        opacity: 0.92;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+    }
+    .btn-facebook {
+        background: linear-gradient(135deg, #1877F2 0%, #0D65D9 100%);
+    }
+    .btn-youtube {
+        background: linear-gradient(135deg, #FF0000 0%, #CC0000 100%);
+    }
+    .btn-tiktok {
+        background: linear-gradient(135deg, #000000 0%, #222222 100%);
+        border: 1px solid #fe2c55;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -246,12 +280,11 @@ Yêu cầu nội dung phát thanh:
                 content = "\n".join(lines).strip()
             return content
     except Exception:
-        # Tự động chuyển tiếp kịch bản chuẩn hóa khi mạng bận hoặc gặp sự cố kết nối
         return generate_default_script(the_loai, co_quan, tieu_de, y_tuong)
 
 
 def text_to_ssml(text: str, voice_name: str) -> str:
-    """Chuyển đổi lời bình thành cấu trúc chuẩn phát thanh viên."""
+    """Chuyển đổi lời bình thành cấu trúc ngắt nghỉ chuẩn phát thanh viên."""
     cleaned = re.sub(r'[\r\t]', '', text)
     paragraphs = [p.strip() for p in cleaned.split('\n') if p.strip()]
     
@@ -278,15 +311,81 @@ async def synthesize_speech(text_or_ssml: str, output_path: str, voice_name: str
     await communicate.save(output_path)
 
 
+def create_logo_badge_image(logo_path: str, sub_text: str, output_path: str):
+    """
+    Tạo cụm đồ họa Logo kèm dòng chữ tên đơn vị bên dưới, 
+    trong suốt và có nền bo mờ tinh tế để nổi bật trên mọi khung hình video.
+    """
+    try:
+        logo = Image.open(logo_path).convert("RGBA")
+    except Exception:
+        logo = Image.open(DEFAULT_LOGO_PATH).convert("RGBA")
+        
+    # Resize logo về chiều cao chuẩn 68px
+    target_h = 68
+    aspect = logo.width / max(logo.height, 1)
+    target_w = int(target_h * aspect)
+    logo = logo.resize((target_w, target_h), Image.Resampling.LANCZOS)
+    
+    clean_subtext = (sub_text or "").strip()
+    
+    candidate_bold_fonts = [
+        "C:/Windows/Fonts/arialbd.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
+    ]
+    font_path = next((p for p in candidate_bold_fonts if os.path.exists(p)), None)
+    font = ImageFont.truetype(font_path, 15) if font_path else ImageFont.load_default()
+    
+    if clean_subtext:
+        dummy_img = Image.new("RGBA", (1, 1))
+        dummy_draw = ImageDraw.Draw(dummy_img)
+        bbox = dummy_draw.textbbox((0, 0), clean_subtext, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        
+        badge_w = max(target_w, text_w) + 28
+        badge_h = target_h + text_h + 16
+        
+        badge = Image.new("RGBA", (badge_w, badge_h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(badge)
+        
+        # Đặt logo vào giữa
+        logo_x = (badge_w - target_w) // 2
+        badge.paste(logo, (logo_x, 0), logo)
+        
+        # Khung nền bo góc mờ sang trọng phía sau chữ
+        pill_box = [
+            (badge_w - text_w) // 2 - 8,
+            target_h + 3,
+            (badge_w + text_w) // 2 + 8,
+            target_h + text_h + 11
+        ]
+        draw.rounded_rectangle(pill_box, radius=5, fill=(0, 26, 60, 215), outline=(255, 184, 0, 220), width=1)
+        
+        # Dòng chữ dưới logo
+        tx = (badge_w - text_w) // 2
+        ty = target_h + 5
+        draw.text((tx, ty), clean_subtext, fill=(255, 255, 255), font=font)
+    else:
+        badge = logo
+
+    badge.save(output_path, "PNG")
+
+
 def create_lower_third_image(width: int, height: int, title: str, co_quan: str, the_loai: str, output_path: str):
     """Tạo banner Lower-Third đồ họa truyền hình sang trọng (#003366 + Vàng Gold) dạng PNG trong suốt."""
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    lt_w = min(1140, width - 60)
+    # Tính toán kích thước phù hợp khung hình (hỗ trợ cả 16:9 và 9:16)
+    lt_w = min(1140, width - 48)
     lt_h = 114
     lt_x = (width - lt_w) // 2
-    lt_y = height - lt_h - 28
+    bottom_pad = 110 if height > width else 28 # Tránh nút TikTok nếu video dọc
+    lt_y = height - lt_h - bottom_pad
     
     # Lớp đổ bóng mờ
     shadow_box = [lt_x + 3, lt_y + 3, lt_x + lt_w + 3, lt_y + lt_h + 3]
@@ -303,7 +402,6 @@ def create_lower_third_image(width: int, height: int, title: str, co_quan: str, 
     tag_box = [lt_x + 28, lt_y + 12, lt_x + 28 + len(the_loai.upper()) * 11 + 24, lt_y + 34]
     draw.rounded_rectangle(tag_box, radius=4, fill=(255, 184, 0, 255))
     
-    # Nạp font tiếng Việt tương thích Windows & Linux (Streamlit Cloud)
     candidate_bold_fonts = [
         "C:/Windows/Fonts/arialbd.ttf",
         "C:/Windows/Fonts/segoeuib.ttf",
@@ -322,12 +420,13 @@ def create_lower_third_image(width: int, height: int, title: str, co_quan: str, 
     font_path_reg = next((p for p in candidate_reg_fonts if os.path.exists(p)), None)
     
     font_tag = ImageFont.truetype(font_path_bold, 13) if font_path_bold else ImageFont.load_default()
-    font_title = ImageFont.truetype(font_path_bold, 24) if font_path_bold else ImageFont.load_default()
-    font_sub = ImageFont.truetype(font_path_reg, 19) if font_path_reg else ImageFont.load_default()
+    font_title = ImageFont.truetype(font_path_bold, 22 if width < 800 else 24) if font_path_bold else ImageFont.load_default()
+    font_sub = ImageFont.truetype(font_path_reg, 17 if width < 800 else 19) if font_path_reg else ImageFont.load_default()
     
     draw.text((lt_x + 36, lt_y + 23), the_loai.upper(), fill=(0, 32, 64), font=font_tag, anchor="lm")
     
-    display_title = title if len(title) <= 65 else title[:62] + "..."
+    max_title_chars = 48 if width < 800 else 65
+    display_title = title if len(title) <= max_title_chars else title[:max_title_chars-3] + "..."
     draw.text((lt_x + 28, lt_y + 54), display_title, fill=(255, 255, 255), font=font_title, anchor="lm")
     
     sub_text = f"Cơ quan thực hiện: {co_quan}"
@@ -338,13 +437,19 @@ def create_lower_third_image(width: int, height: int, title: str, co_quan: str, 
 
 def mix_audio_with_ducking(voice_path: str, bgm_path: str, output_path: str, ducking_volume: float = 0.15) -> float:
     """Mix giọng đọc BTV với nhạc nền phóng sự BGM áp dụng Audio Ducking chuẩn."""
-    voice = AudioSegment.from_file(voice_path)
+    try:
+        voice = AudioSegment.from_file(voice_path, format="mp3", codec="mp3")
+    except Exception:
+        voice = AudioSegment.from_file(voice_path)
     voice = voice + 3.0
     
     voice_duration_ms = len(voice)
     total_duration_ms = voice_duration_ms + 2500
     
-    bgm = AudioSegment.from_file(bgm_path)
+    try:
+        bgm = AudioSegment.from_file(bgm_path, format="mp3", codec="mp3")
+    except Exception:
+        bgm = AudioSegment.from_file(bgm_path)
     while len(bgm) < total_duration_ms:
         bgm = bgm + bgm
     bgm = bgm[:total_duration_ms]
@@ -363,8 +468,8 @@ def mix_audio_with_ducking(voice_path: str, bgm_path: str, output_path: str, duc
     return total_duration_ms / 1000.0
 
 
-def process_photo_slideshow(source_files: list, tmpdir: str, total_duration: float):
-    """Chuẩn hóa toàn bộ ảnh về chuẩn 1280x720, tự động xoay EXIF, và tạo concat demuxer cho FFmpeg."""
+def process_photo_slideshow(source_files: list, tmpdir: str, total_duration: float, target_w: int = 1280, target_h: int = 720):
+    """Chuẩn hóa toàn bộ ảnh về chuẩn kích thước, tự động xoay EXIF, và tạo concat demuxer cho FFmpeg."""
     normalized_paths = []
     for idx, f_item in enumerate(source_files):
         out_frame = os.path.join(tmpdir, f"std_frame_{idx:03d}.jpg")
@@ -376,17 +481,17 @@ def process_photo_slideshow(source_files: list, tmpdir: str, total_duration: flo
         img = ImageOps.exif_transpose(img)
         img = img.convert("RGB")
         
-        # Tạo canvas chuẩn 1280x720 nền tối sang trọng
-        canvas = Image.new("RGB", (1280, 720), (12, 20, 36))
+        # Tạo canvas chuẩn nền tối sang trọng
+        canvas = Image.new("RGB", (target_w, target_h), (12, 20, 36))
         
         img_w, img_h = img.size
-        scale = min(1280 / img_w, 720 / img_h)
+        scale = min(target_w / img_w, target_h / img_h)
         new_w = max(1, int(img_w * scale))
         new_h = max(1, int(img_h * scale))
         resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         
-        paste_x = (1280 - new_w) // 2
-        paste_y = (720 - new_h) // 2
+        paste_x = (target_w - new_w) // 2
+        paste_y = (target_h - new_h) // 2
         canvas.paste(resized, (paste_x, paste_y))
         canvas.save(out_frame, "JPEG", quality=95)
         normalized_paths.append(out_frame)
@@ -412,39 +517,62 @@ def render_full_report_video(
     voice_path: str,
     bgm_path: str,
     logo_path: str,
+    logo_subtext: str,
     logo_position: str,
     title: str,
     co_quan: str,
     the_loai: str,
+    aspect_ratio: str,
     output_video_path: str,
     progress_bar = None,
     status_text = None
 ):
-    """Quy trình Render Video Phóng sự Hoàn Chỉnh Out-of-the-Box."""
+    """
+    Quy trình Render Video Phóng sự Hoàn Chỉnh:
+    - Logo + Tên đơn vị bên dưới nằm ở góc trái/phải
+    - Lower-Third chỉ hiển thị 10% thời lượng rồi tự động mờ dần biến mất
+    - Hỗ trợ tỷ lệ 16:9 (YouTube/Facebook) hoặc 9:16 (TikTok/Reels/Shorts)
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
+        # Xác định độ phân giải theo tỷ lệ
+        if aspect_ratio == "9:16":
+            out_w, out_h = 720, 1280
+        else:
+            out_w, out_h = 1280, 720
+
+        # Bước 1: Mix âm thanh Audio Ducking
         if status_text:
             status_text.info("Đang xử lý âm thanh: Đồng bộ giọng BTV và mix nhạc nền Audio Ducking...")
         if progress_bar:
-            progress_bar.progress(20)
+            progress_bar.progress(15)
             
         mixed_audio_path = os.path.join(tmpdir, "mixed_audio.mp3")
         total_duration = mix_audio_with_ducking(voice_path, bgm_path, mixed_audio_path, ducking_volume=0.15)
         
+        # Bước 2: Tạo banner Lower Third và Cụm Logo có chữ bên dưới
         if status_text:
-            status_text.info("Đang khởi tạo đồ họa truyền hình: Lower Third và xử lý Logo...")
+            status_text.info("Đang khởi tạo đồ họa truyền hình: Lower Third và Cụm Logo đơn vị...")
         if progress_bar:
-            progress_bar.progress(40)
+            progress_bar.progress(35)
             
         lt_image_path = os.path.join(tmpdir, "lower_third.png")
-        create_lower_third_image(1280, 720, title, co_quan, the_loai, lt_image_path)
+        create_lower_third_image(out_w, out_h, title, co_quan, the_loai, lt_image_path)
         
+        logo_badge_path = os.path.join(tmpdir, "logo_badge.png")
+        create_logo_badge_image(logo_path, logo_subtext, logo_badge_path)
+        
+        # Tính thời lượng hiển thị Lower-Third: đúng 10% thời lượng của video (tối thiểu 4.0s)
+        lt_duration = max(total_duration * 0.10, 4.0)
+        fade_start = max(lt_duration - 0.8, 0.5)
+
+        # Bước 3: Chuẩn hóa tư liệu ảnh / video hiện trường
         if status_text:
             status_text.info("Đang chuẩn hóa tư liệu hình ảnh / video hiện trường...")
         if progress_bar:
-            progress_bar.progress(60)
+            progress_bar.progress(55)
             
         if source_type == "photo":
-            input_args = process_photo_slideshow(source_files, tmpdir, total_duration)
+            input_args = process_photo_slideshow(source_files, tmpdir, total_duration, out_w, out_h)
         else:
             raw_video = source_files[0]
             if isinstance(raw_video, (bytes, bytearray)):
@@ -456,18 +584,21 @@ def render_full_report_video(
                 
             input_args = ["-stream_loop", "-1", "-i", safe_vid_path]
 
-        # Vị trí đặt Logo
+        # Vị trí đặt Logo (Góc trái hoặc phải)
         if logo_position == "Top-Left":
-            logo_overlay = "overlay=28:28"
+            logo_overlay = "overlay=24:24"
         else:
-            logo_overlay = "overlay=W-w-28:28"
+            logo_overlay = "overlay=W-w-24:24"
 
-        # Ghép nối các lớp đồ họa và video
+        # Ghép nối các lớp đồ họa:
+        # [0:v] Nguồn video/ảnh chuẩn hóa kích thước và tỷ lệ
+        # [1:v] Lower-Third mờ dần và biến mất sau 10% thời lượng
+        # [2:v] Logo Badge (kèm tên đơn vị bên dưới) hiển thị liên tục
         filter_complex = (
-            "[0:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[base]; "
-            "[1:v]scale=1280:720[lt]; "
-            "[base][lt]overlay=0:0[v_lt]; "
-            "[2:v]scale=180:-1[logo]; "
+            f"[0:v]scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[base]; "
+            f"[1:v]format=rgba,fade=t=out:st={fade_start:.2f}:d=0.8:alpha=1[lt_faded]; "
+            f"[base][lt_faded]overlay=0:0:enable='lte(t,{lt_duration:.2f})'[v_lt]; "
+            f"[2:v]format=rgba[logo]; "
             f"[v_lt][logo]{logo_overlay}[vout]"
         )
 
@@ -480,7 +611,7 @@ def render_full_report_video(
             FFMPEG_BIN, "-y"
         ] + input_args + [
             "-i", lt_image_path,
-            "-i", logo_path,
+            "-i", logo_badge_path,
             "-i", mixed_audio_path,
             "-filter_complex", filter_complex,
             "-map", "[vout]",
@@ -531,42 +662,50 @@ with st.container():
         <div>
             <span class="tv-live-badge">● TRUYỀN HÌNH CƠ SỞ</span>
             <h1 class="tv-header-title">HỆ THỐNG BIÊN TẬP VIDEO PHÓNG SỰ ĐỊA PHƯƠNG</h1>
-            <div class="tv-header-subtitle">Tự động hóa sản xuất bản tin & phóng sự thời sự truyền hình</div>
+            <div class="tv-header-subtitle">Tự động hóa sản xuất bản tin & phóng sự thời sự đa nền tảng</div>
         </div>
         <div style="text-align: right; background: rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 8px; border: 1px solid rgba(255,184,0,0.4);">
-            <div style="font-size: 12px; color: #d0e1fd; text-transform: uppercase; letter-spacing: 1px;">KÊNH TRUYỀN THÔNG</div>
-            <div style="font-size: 16px; font-weight: 700; color: #FFB800;">HD 1080p / 720p Broadcast</div>
+            <div style="font-size: 12px; color: #d0e1fd; text-transform: uppercase; letter-spacing: 1px;">XUẤT BẢN TRUYỀN THÔNG</div>
+            <div style="font-size: 16px; font-weight: 700; color: #FFB800;">TV • Facebook • YouTube • TikTok</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 2. Cấu hình Nhận diện & Logo
+# 2. Cấu hình Nhận diện, Logo & Chữ dưới Logo
 with st.expander("⚙️ CẤU HÌNH NHẬN DIỆN ĐƠN VỊ & LOGO TRUYỀN HÌNH", expanded=True):
-    cfg_col1, cfg_col2, cfg_col3, cfg_col4 = st.columns([1.2, 1.4, 1.2, 1.0])
-    
-    with cfg_col1:
+    col_u1, col_u2 = st.columns([1, 1.2])
+    with col_u1:
         the_loai_input = st.text_input(
             "📺 Thể loại chương trình / Phóng sự",
             value=the_loai_default,
             help="Ví dụ: Phóng sự địa phương, Bản tin cơ sở, Chuyên mục Đại đoàn kết, Gương sáng quanh ta..."
         )
-    with cfg_col2:
+    with col_u2:
         co_quan_input = st.text_input(
             "🏛️ Cơ quan / Đơn vị thực hiện",
             value=co_quan_default,
             help="Ví dụ: UBMTTQVN Xã Lai Hòa, UBND Xã, Hội Nông dân, Đoàn Thanh niên..."
         )
-    with cfg_col3:
+        
+    col_l1, col_l2, col_l3 = st.columns([1.1, 1.3, 1.0])
+    with col_l1:
         logo_file = st.file_uploader(
-            "🏷️ Logo Đài / Đơn vị (PNG/JPG)",
+            "🏷️ Biểu trưng / Logo đơn vị (PNG/JPG)",
             type=["png", "jpg", "jpeg"],
             help="Tải lên logo đơn vị hoặc đài. Nếu để trống, hệ thống tự động dùng Logo truyền hình cơ sở mẫu."
         )
-    with cfg_col4:
+    with col_l2:
+        logo_subtext_input = st.text_input(
+            "✍️ Dòng chữ dưới Logo trong video",
+            value="Hội Nông dân Xã Lai Hòa",
+            help="Ví dụ: Hội Nông dân Xã Lai Hòa, UBND Xã Lai Hòa... Chữ sẽ hiển thị ngay dưới biểu trưng/logo ở góc video."
+        )
+    with col_l3:
         logo_pos = st.selectbox(
             "📍 Vị trí hiển thị Logo",
             options=["Top-Right (Góc trên phải)", "Top-Left (Góc trên trái)"],
-            index=0
+            index=0,
+            help="Chọn vị trí đặt biểu trưng logo và dòng chữ đơn vị trong video."
         )
         logo_pos_val = "Top-Left" if "Top-Left" in logo_pos else "Top-Right"
 
@@ -580,8 +719,8 @@ else:
 
 st.markdown(f"""
 <div style="background-color: #00254d; color: #ffffff; padding: 8px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 15px; border-left: 5px solid #FFB800; display: flex; justify-content: space-between; align-items: center;">
-    <div><strong>{the_loai_input.upper()}</strong> &nbsp;|&nbsp; Cơ quan thực hiện: <span style="color: #FFD166; font-weight: 700;">{co_quan_input}</span></div>
-    <div style="font-size: 13px; color: #b3cce6;">Đồ họa Lower-Third & Logo tự động đồng bộ</div>
+    <div><strong>{the_loai_input.upper()}</strong> &nbsp;|&nbsp; Đơn vị: <span style="color: #FFD166; font-weight: 700;">{logo_subtext_input or co_quan_input}</span></div>
+    <div style="font-size: 13px; color: #b3cce6;">Logo: {logo_pos_val} • Lower-Third: Tự ẩn sau 10% thời lượng</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -618,7 +757,6 @@ with col_left:
         if uploaded_photos:
             selected_files = [up.getvalue() for up in uploaded_photos]
             st.success(f"✅ Đã nhận {len(selected_files)} ảnh tư liệu từ thiết bị của bạn.")
-            # Hiển thị xem trước ảnh dạng thumbnail
             preview_count = min(len(selected_files), 4)
             preview_cols = st.columns(preview_count)
             for i in range(preview_count):
@@ -665,17 +803,32 @@ with col_left:
         help="Nhập các hoạt động thăm hỏi, số lượng nhà đại đoàn kết, công trình dân sinh..."
     )
 
-    # 4. Chọn giọng đọc BTV
-    st.markdown("🎙️ **Chọn giọng đọc Phát thanh viên:**")
-    voice_choice = st.selectbox(
-        "Giọng đọc phát thanh viên Nam Bộ:",
-        options=[
-            "Giọng Nam Nam Bộ (Trầm ấm, đĩnh đạc) - vi-VN-NamMinhNeural",
-            "Giọng Nữ Nam Bộ (Truyền cảm, dịu dàng) - vi-VN-HoaiMyNeural"
-        ],
-        index=0
-    )
-    voice_name = "vi-VN-NamMinhNeural" if "Nam" in voice_choice else "vi-VN-HoaiMyNeural"
+    # 4. Giọng đọc BTV & Tỷ lệ khung hình
+    col_v1, col_v2 = st.columns([1.1, 0.9])
+    with col_v1:
+        st.markdown("🎙️ **Chọn giọng đọc Phát thanh viên:**")
+        voice_choice = st.selectbox(
+            "Giọng đọc phát thanh viên Nam Bộ:",
+            options=[
+                "Giọng Nam Nam Bộ (Trầm ấm, đĩnh đạc) - vi-VN-NamMinhNeural",
+                "Giọng Nữ Nam Bộ (Truyền cảm, dịu dàng) - vi-VN-HoaiMyNeural"
+            ],
+            index=0
+        )
+        voice_name = "vi-VN-NamMinhNeural" if "Nam" in voice_choice else "vi-VN-HoaiMyNeural"
+
+    with col_v2:
+        st.markdown("📐 **Tỷ lệ khung hình xuất bản:**")
+        aspect_choice = st.selectbox(
+            "Định dạng video nền tảng:",
+            options=[
+                "16:9 Ngang (YouTube, Facebook, Cổng thông tin)",
+                "9:16 Dọc (TikTok, Facebook Reels, Shorts)"
+            ],
+            index=0,
+            help="Chọn 16:9 cho truyền hình/Facebook/YouTube hoặc 9:16 cho TikTok/Reels/Shorts."
+        )
+        aspect_ratio_val = "9:16" if "9:16" in aspect_choice else "16:9"
 
 
 # ==================== CỘT 2: XỬ LÝ & XUẤT BẢN ====================
@@ -718,7 +871,6 @@ with col_right:
             st.session_state.text_area_ssml = st.session_state.ssml_text
             st.rerun()
 
-    # Khởi tạo kịch bản ban đầu nếu chưa có
     if not st.session_state.script_text:
         st.session_state.script_text = generate_default_script(
             the_loai_input, co_quan_input, title_input, notes_input
@@ -734,7 +886,7 @@ with col_right:
 
     st.text_area(
         "Nội dung phát thanh / Lời bình phóng sự (Có thể chỉnh sửa trực tiếp):",
-        height=160,
+        height=150,
         key="text_area_script",
         on_change=on_script_change
     )
@@ -747,7 +899,7 @@ with col_right:
     with st.expander("Xem chi tiết cấu trúc ngắt nhịp (300ms dấu phẩy, 600ms dấu chấm, 1000ms chuyển đoạn):", expanded=False):
         st.text_area(
             "Cấu trúc nhịp điệu phát thanh:",
-            height=130,
+            height=120,
             key="text_area_ssml",
             on_change=on_ssml_change
         )
@@ -784,12 +936,11 @@ with col_right:
 
     # BƯỚC 4: RENDER VIDEO PHÓNG SỰ
     st.markdown("##### 🎥 Bước 4: Xuất bản Video Phóng sự Hoàn Chỉnh")
-    st.caption("✨ Tự động tích hợp: Video/Ảnh hiện trường + Giọng đọc BTV + Nhạc nền Audio Ducking + Lower-Third thông tin đơn vị + Logo truyền hình.")
+    st.caption("✨ Tự động tích hợp: Video/Ảnh hiện trường + Giọng BTV + Nhạc nền Ducking + Cụm Logo có chữ đơn vị + Lower-Third tự ẩn sau 10% thời lượng.")
     
     render_btn = st.button("🚀 Xuất Bản Video Phóng Sự", key="btn_render", type="primary")
 
     if render_btn:
-        # Tự động thu âm giọng đọc BTV nếu chưa có
         if not st.session_state.recorded_audio_path or not os.path.exists(st.session_state.recorded_audio_path):
             with st.spinner("Đang tự động thu âm giọng đọc BTV trước khi xuất bản..."):
                 temp_audio_file = os.path.join(tempfile.gettempdir(), "btv_voice_auto.mp3")
@@ -803,7 +954,7 @@ with col_right:
         render_progress = st.progress(0)
         render_status = st.empty()
         
-        output_video_file = os.path.join(tempfile.gettempdir(), "final_phong_su_dia_phuong.mp4")
+        output_video_file = os.path.join(tempfile.gettempdir(), f"final_phong_su_{aspect_ratio_val.replace(':', '_')}.mp4")
         
         try:
             render_full_report_video(
@@ -812,10 +963,12 @@ with col_right:
                 voice_path=st.session_state.recorded_audio_path,
                 bgm_path=DEFAULT_BGM_PATH,
                 logo_path=active_logo_path,
+                logo_subtext=logo_subtext_input,
                 logo_position=logo_pos_val,
                 title=title_input,
                 co_quan=co_quan_input,
                 the_loai=the_loai_input,
+                aspect_ratio=aspect_ratio_val,
                 output_video_path=output_video_file,
                 progress_bar=render_progress,
                 status_text=render_status
@@ -824,9 +977,9 @@ with col_right:
         except Exception as e:
             st.error(f"Lỗi khi render video: {str(e)}")
 
-    # Hiển thị video phóng sự đã xuất bản
+    # Hiển thị video phóng sự đã xuất bản & Nút xuất bản đa nền tảng
     if st.session_state.rendered_video_path and os.path.exists(st.session_state.rendered_video_path):
-        st.markdown("#### 📺 Video Phóng sự Hoàn Chỉnh:")
+        st.markdown(f"#### 📺 Video Phóng sự Hoàn Chỉnh ({aspect_choice.split()[0]}):")
         st.video(st.session_state.rendered_video_path)
         
         with open(st.session_state.rendered_video_path, "rb") as vf:
@@ -834,14 +987,79 @@ with col_right:
             st.download_button(
                 label="📥 Tải video phóng sự hoàn chỉnh (.mp4)",
                 data=video_bytes,
-                file_name=f"phong_su_{co_quan_input.replace(' ', '_')}.mp4",
+                file_name=f"phong_su_{co_quan_input.replace(' ', '_')}_{aspect_ratio_val.replace(':', '_')}.mp4",
                 mime="video/mp4",
                 key="btn_download_video"
             )
 
+        # =========================================================================
+        # 🚀 TÍNH NĂNG XUẤT VIDEO THẲNG VÔ FACEBOOK, YOUTUBE, TIKTOK
+        # =========================================================================
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #091e3a 0%, #102e56 100%); border: 2px solid #FFB800; border-radius: 12px; padding: 20px 22px; margin-top: 24px; color: #ffffff; box-shadow: 0 8px 20px rgba(0,35,70,0.25);">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,184,0,0.35); padding-bottom: 10px; margin-bottom: 14px;">
+                <div style="font-size: 17px; font-weight: 800; color: #FFB800; letter-spacing: 0.5px;">
+                    📲 XUẤT BẢN & ĐĂNG VIDEO THẲNG LÊN MẠNG XÃ HỘI
+                </div>
+                <span style="background: #D90429; color: #ffffff; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 700;">1-CLICK UPLOAD</span>
+            </div>
+            <div style="font-size: 13.5px; color: #e1edff; line-height: 1.5; margin-bottom: 16px;">
+                Nhấn vào các nút bên dưới để mở thẳng trình đăng tải video chính thức của từng nền tảng:
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 3 Nút đăng thẳng vào từng nền tảng
+        soc_col1, soc_col2, soc_col3 = st.columns(3)
+        with soc_col1:
+            st.markdown("""
+            <a href="https://business.facebook.com/latest/content_management" target="_blank" class="social-btn btn-facebook">
+                <span>🔵</span> Đăng lên Facebook
+            </a>
+            """, unsafe_allow_html=True)
+            st.caption("Mở Meta Business / Facebook Video")
+
+        with soc_col2:
+            st.markdown("""
+            <a href="https://studio.youtube.com/channel/_/videos/upload?d=pt" target="_blank" class="social-btn btn-youtube">
+                <span>🔴</span> Tải lên YouTube
+            </a>
+            """, unsafe_allow_html=True)
+            st.caption("Mở YouTube Studio Upload")
+
+        with soc_col3:
+            st.markdown("""
+            <a href="https://www.tiktok.com/creator-center/upload?from=webapp" target="_blank" class="social-btn btn-tiktok">
+                <span>⚫</span> Tải lên TikTok
+            </a>
+            """, unsafe_allow_html=True)
+            st.caption("Mở TikTok Creator Studio")
+
+        # Bộ nội dung & Hashtags tạo sẵn để dán ngay
+        clean_tag_unit = re.sub(r'[^a-zA-Z0-9_]', '', co_quan_input.replace(' ', '_').lower())
+        auto_caption = f"""{title_input}
+
+🏛️ Cơ quan thực hiện: {co_quan_input}
+📺 Thể loại: {the_loai_input}
+
+{st.session_state.script_text}
+
+---
+#phongsu #thoisu #{clean_tag_unit} #truyenhinhcoso #tintuc24h #daidoanket #nongthonmoi #xuhuong #fyp"""
+
+        with st.expander("📋 Xem & Sao chép Tiêu đề + Nội dung mô tả + Hashtags đã tối ưu sẵn", expanded=True):
+            st.text_area(
+                "Nội dung chuẩn SEO sẵn sàng Copy-Paste vào Facebook / YouTube / TikTok:",
+                value=auto_caption,
+                height=180,
+                key="social_copy_text"
+            )
+            st.caption("💡 Mẹo: Bấm 'Tải video' ở trên, sau đó bấm nút nền tảng tương ứng và dán nội dung này vào bài đăng là xong!")
+
+
 # --- Footer Thông tin ---
 st.markdown("""
 <div style="text-align: center; color: #8898aa; font-size: 13px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-    Hệ thống Biên tập Video Phóng sự Truyền hình Cơ sở • Đồ họa Lower-Third & Phát thanh Tiếng Việt Chuẩn hóa
+    Hệ thống Biên tập Video Phóng sự Truyền hình Cơ sở • Tích hợp Đồ họa Lower-Third 10% Auto-Hide & Xuất bản Mạng Xã Hội Đa Kênh
 </div>
 """, unsafe_allow_html=True)
