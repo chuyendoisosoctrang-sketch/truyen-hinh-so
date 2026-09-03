@@ -669,7 +669,7 @@ def create_lower_third_image(width: int, height: int, title: str, co_quan: str, 
 
 
 def mix_audio_with_ducking(voice_path: str, bgm_path: str, output_path: str, ducking_volume: float = 0.15) -> float:
-    """Mix giọng đọc BTV với nhạc nền phóng sự BGM áp dụng Audio Ducking chuẩn."""
+    """Mix giọng đọc BTV với nhạc nền phóng sự BGM áp dụng Audio Ducking chuẩn (hoặc chỉ xuất giọng nếu không dùng BGM)."""
     try:
         voice = AudioSegment.from_file(voice_path, format="mp3", codec="mp3")
     except Exception:
@@ -678,6 +678,14 @@ def mix_audio_with_ducking(voice_path: str, bgm_path: str, output_path: str, duc
     
     voice_duration_ms = len(voice)
     total_duration_ms = voice_duration_ms + 2500
+
+    # Nếu không dùng nhạc nền (hoặc không tìm thấy file nhạc)
+    if not bgm_path or not os.path.exists(bgm_path):
+        silence_start = AudioSegment.silent(duration=800)
+        silence_end = AudioSegment.silent(duration=1700)
+        final_mix = silence_start + voice + silence_end
+        final_mix.export(output_path, format="mp3", bitrate="192k")
+        return total_duration_ms / 1000.0
     
     try:
         bgm = AudioSegment.from_file(bgm_path, format="mp3", codec="mp3")
@@ -1118,76 +1126,102 @@ with tab1:
         )
         aspect_ratio_val = "9:16" if "9:16" in aspect_choice else "16:9"
 
-    # 5. Cấu hình Nhạc Nền Phóng Sự (BGM) & Audio Ducking
-    st.markdown("🎵 **6. Cấu hình Nhạc Nền Phóng Sự (BGM):**")
-    bgm_col1, bgm_col2 = st.columns([1.1, 0.9])
-    with bgm_col1:
-        bgm_genre = st.selectbox(
-            "Chọn phong cách nhạc nền:",
-            options=[
-                "🎺 Thời sự - Chính luận trang trọng (Chuẩn VTV/HTV)",
-                "🌾 Nông thôn mới & Đại đoàn kết (Phấn khởi, tươi vui)",
-                "🎻 Phóng sự - Gương sáng cơ sở (Truyền cảm, sâu lắng)",
-                "📁 Tải lên nhạc nền tùy chọn từ thiết bị (.mp3, .wav)"
-            ],
-            index=0
-        )
-    with bgm_col2:
-        ducking_choice = st.selectbox(
-            "🎚️ Mức giảm nhạc khi BTV đọc (Ducking):",
-            options=[
-                "Giảm 15% (Chuẩn truyền hình - Khuyên dùng)",
-                "Giảm 10% (Nhẹ, nhạc to hơn)",
-                "Giảm 20% (Rõ giọng BTV)",
-                "Giảm 25% (Nhạc nền rất nhỏ)"
-            ],
-            index=0
-        )
-        ducking_map = {
-            "Giảm 15% (Chuẩn truyền hình - Khuyên dùng)": 0.15,
-            "Giảm 10% (Nhẹ, nhạc to hơn)": 0.25,
-            "Giảm 20% (Rõ giọng BTV)": 0.10,
-            "Giảm 25% (Nhạc nền rất nhỏ)": 0.05
-        }
-        ducking_vol = ducking_map.get(ducking_choice, 0.15)
+    # 5. Cấu hình Nhạc Nền Phóng Sự (BGM) - Tùy chọn
+    st.markdown("🎵 **6. Cấu hình Nhạc Nền Phóng Sự (BGM) — [Tùy Chọn]:**")
+    use_bgm = st.checkbox(
+        "Bật nhạc nền cho video phóng sự",
+        value=True,
+        help="Đánh dấu chọn để lồng nhạc nền vào video. Bỏ chọn nếu chỉ muốn giữ âm thanh giọng đọc của BTV."
+    )
+    active_bgm_path = ""
+    ducking_vol = 0.15
+    bgm_summary_label = "Không dùng (Chỉ giọng BTV)"
 
-    if "Tải lên" in bgm_genre:
-        custom_bgm = st.file_uploader(
-            "Tải file nhạc nền từ thiết bị (.mp3, .wav, .m4a):",
-            type=["mp3", "wav", "m4a", "ogg"]
-        )
-        if custom_bgm:
-            custom_bgm_path = os.path.join(tempfile.gettempdir(), f"custom_bgm_{custom_bgm.name}")
-            with open(custom_bgm_path, "wb") as cbf:
-                cbf.write(custom_bgm.getvalue())
-            active_bgm_path = custom_bgm_path
-            st.success(f"✅ Đã nạp nhạc nền tùy chọn: {custom_bgm.name}")
+    if use_bgm:
+        bgm_col1, bgm_col2 = st.columns([1.1, 0.9])
+        with bgm_col1:
+            bgm_genre = st.selectbox(
+                "Chọn phong cách nhạc nền:",
+                options=[
+                    "🎺 Thời sự - Chính luận trang trọng (Chuẩn VTV/HTV)",
+                    "🌾 Nông thôn mới & Đại đoàn kết (Phấn khởi, tươi vui)",
+                    "🎻 Phóng sự - Gương sáng cơ sở (Truyền cảm, sâu lắng)",
+                    "📁 Tải lên nhạc nền tùy chọn từ thiết bị (.mp3, .wav)"
+                ],
+                index=0
+            )
+        with bgm_col2:
+            ducking_choice = st.selectbox(
+                "🎚️ Mức giảm nhạc khi BTV đọc (Ducking):",
+                options=[
+                    "Giảm 15% (Chuẩn truyền hình - Khuyên dùng)",
+                    "Giảm 10% (Nhẹ, nhạc to hơn)",
+                    "Giảm 20% (Rõ giọng BTV)",
+                    "Giảm 25% (Nhạc nền rất nhỏ)"
+                ],
+                index=0
+            )
+            ducking_map = {
+                "Giảm 15% (Chuẩn truyền hình - Khuyên dùng)": 0.15,
+                "Giảm 10% (Nhẹ, nhạc to hơn)": 0.25,
+                "Giảm 20% (Rõ giọng BTV)": 0.10,
+                "Giảm 25% (Nhạc nền rất nhỏ)": 0.05
+            }
+            ducking_vol = ducking_map.get(ducking_choice, 0.15)
+
+        if "Tải lên" in bgm_genre:
+            custom_bgm = st.file_uploader(
+                "Tải file nhạc nền từ thiết bị (.mp3, .wav, .m4a):",
+                type=["mp3", "wav", "m4a", "ogg"]
+            )
+            if custom_bgm:
+                custom_bgm_path = os.path.join(tempfile.gettempdir(), f"custom_bgm_{custom_bgm.name}")
+                with open(custom_bgm_path, "wb") as cbf:
+                    cbf.write(custom_bgm.getvalue())
+                active_bgm_path = custom_bgm_path
+                st.success(f"✅ Đã nạp nhạc nền tùy chọn: {custom_bgm.name}")
+            else:
+                active_bgm_path = BGM_CHINH_LUAN_PATH
+        elif "Nông thôn" in bgm_genre:
+            active_bgm_path = BGM_NONG_THON_PATH
+        elif "Phóng sự" in bgm_genre:
+            active_bgm_path = BGM_TRUYEN_CAM_PATH
         else:
             active_bgm_path = BGM_CHINH_LUAN_PATH
-    elif "Nông thôn" in bgm_genre:
-        active_bgm_path = BGM_NONG_THON_PATH
-    elif "Phóng sự" in bgm_genre:
-        active_bgm_path = BGM_TRUYEN_CAM_PATH
+
+        if os.path.exists(active_bgm_path):
+            st.caption("🎧 Nghe thử nhạc nền đã chọn:")
+            st.audio(active_bgm_path, format="audio/mp3")
+
+        bgm_genre_clean = bgm_genre.split()[1] if len(bgm_genre.split()) > 1 else bgm_genre
+        bgm_summary_label = f"{bgm_genre_clean} ({ducking_choice.split()[0]})"
     else:
-        active_bgm_path = BGM_CHINH_LUAN_PATH
+        st.info("💡 Bạn đã tắt nhạc nền. Video sẽ chỉ phát âm thanh lời bình của phát thanh viên, không chèn nhạc nền.")
 
-    if os.path.exists(active_bgm_path):
-        st.caption("🎧 Nghe thử nhạc nền đã chọn:")
-        st.audio(active_bgm_path, format="audio/mp3")
-
-    # 6. Hiệu Ứng Hình Ảnh Video (VFX)
-    st.markdown("✨ **7. Hiệu Ứng Hình Ảnh Video (VFX):**")
-    vfx_choice = st.selectbox(
-        "Chọn hiệu ứng xử lý hình ảnh:",
-        options=[
-            "🎬 Phóng sự Điện ảnh (Chuyển cảnh mượt mà + Màu truyền hình sắc nét)",
-            "✨ Chuyển cảnh mượt mà (Smooth Crossfade Dissolve)",
-            "🎞️ Màu sắc Truyền hình Rực rỡ (Vibrant Broadcast Color)",
-            "⚡ Tiêu chuẩn (Standard Cut - Xuất bản nhanh)"
-        ],
-        index=0,
-        help="Tự động áp dụng hiệu ứng chuyển cảnh hòa tan giữa các ảnh và tối ưu hóa màu sắc truyền hình."
+    # 6. Hiệu Ứng Hình Ảnh Video (VFX) - Tùy chọn
+    st.markdown("✨ **7. Hiệu Ứng Hình Ảnh Video (VFX) — [Tùy Chọn]:**")
+    use_vfx = st.checkbox(
+        "Áp dụng hiệu ứng xử lý hình ảnh & chuyển cảnh mượt mà",
+        value=True,
+        help="Đánh dấu chọn để áp dụng chuyển cảnh hòa tan mờ chồng và tối ưu tone màu truyền hình. Bỏ chọn để giữ nguyên khung hình gốc và xuất video nhanh nhất."
     )
+
+    if use_vfx:
+        vfx_choice = st.selectbox(
+            "Chọn hiệu ứng xử lý hình ảnh:",
+            options=[
+                "🎬 Phóng sự Điện ảnh (Chuyển cảnh mượt mà + Màu truyền hình sắc nét)",
+                "✨ Chuyển cảnh mượt mà (Smooth Crossfade Dissolve)",
+                "🎞️ Màu sắc Truyền hình Rực rỡ (Vibrant Broadcast Color)"
+            ],
+            index=0,
+            help="Tự động áp dụng hiệu ứng chuyển cảnh hòa tan giữa các ảnh và tối ưu hóa màu sắc truyền hình."
+        )
+        vfx_summary_label = vfx_choice.split()[1] if len(vfx_choice.split()) > 1 else vfx_choice
+    else:
+        vfx_choice = "Tiêu chuẩn (Gốc)"
+        vfx_summary_label = "Không dùng (Gốc)"
+        st.info("💡 Bạn đã tắt hiệu ứng hình ảnh. Video sẽ giữ nguyên chất lượng và khung hình gốc, chuyển tiếp cắt thẳng (Fast cut).")
 
     st.markdown("""
     <div class="mobile-step-hint">
@@ -1330,8 +1364,6 @@ with tab3:
     unit_label = logo_subtext_input.strip() or co_quan_input.strip() or "(Chưa đặt tên)"
     title_label = title_input.strip() or "(Chưa đặt tiêu đề)"
     source_label = f"{len(selected_files)} ảnh tư liệu" if selected_source_type == "photo" else ("Đã có video tư liệu" if selected_files else "Chưa có video")
-    bgm_short_name = bgm_genre.split()[1] if len(bgm_genre.split()) > 1 else bgm_genre
-
     st.markdown(f"""
     <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
         <div style="font-weight: 700; color: #003366; font-size: 15px; margin-bottom: 8px;">📋 Tóm Tắt Thông Số Video:</div>
@@ -1340,8 +1372,8 @@ with tab3:
             <div>🏛️ <strong>Đơn vị:</strong> {unit_label}</div>
             <div>🎙️ <strong>Giọng BTV:</strong> {voice_label}</div>
             <div>📐 <strong>Tỷ lệ:</strong> {aspect_choice.split()[0]}</div>
-            <div>🎵 <strong>Nhạc nền:</strong> {bgm_short_name} ({ducking_choice.split()[0]})</div>
-            <div>✨ <strong>Hiệu ứng:</strong> {vfx_choice.split()[1] if len(vfx_choice.split()) > 1 else vfx_choice}</div>
+            <div>🎵 <strong>Nhạc nền:</strong> {bgm_summary_label}</div>
+            <div>✨ <strong>Hiệu ứng:</strong> {vfx_summary_label}</div>
             <div>🎬 <strong>Tư liệu:</strong> {source_label}</div>
         </div>
     </div>
