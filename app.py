@@ -934,68 +934,63 @@ if "rendered_video_path" not in st.session_state:
 the_loai_default = "Bản tin thời sự cơ sở"
 co_quan_default = ""
 
-# 1. Top Banner (Mobile-First Responsive)
+# 1. Top Banner
 with st.container():
     st.markdown("""
     <div class="tv-header-container">
         <div class="tv-header-brand">
-            <span class="tv-live-badge">● TRUYỀN HÌNH CƠ SỞ</span>
-            <h1 class="tv-header-title">HỆ THỐNG BIÊN TẬP VIDEO PHÓNG SỰ ĐỊA PHƯƠNG</h1>
-            <div class="tv-header-subtitle">Tự động hóa sản xuất bản tin & phóng sự thời sự đa nền tảng</div>
+            <span class="tv-live-badge">● TRUYỀN HÌNH</span>
+            <h1 class="tv-header-title">HỆ THỐNG BIÊN TẬP VIDEO PHÓNG SỰ</h1>
+            <div class="tv-header-subtitle">Sản xuất video tin tức & phóng sự tự động bằng AI</div>
         </div>
         <div class="tv-header-owner-box">
-            <div class="tv-owner-tag">🏛️ CHỦ QUYỀN ỨNG DỤNG</div>
+            <div class="tv-owner-tag">🏛️ BẢN QUYỀN</div>
             <div class="tv-owner-company">CÔNG TY TNHH MTV GIẢI PHÁP THANH TOÁN TRỰC TUYẾN SÓC TRĂNG</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 2. Quy Trình Sản Xuất Video Phóng Sự 1-Chạm (Tự Động Từ A Đến Z)
+# 2. Nhập thông tin & Tư liệu
 st.markdown("""
 <div class="broadcast-card-header">
-    🎬 NHẬP TƯ LIỆU & THÔNG TIN SỰ KIỆN PHÓNG SỰ
+    🎬 THÔNG TIN & TƯ LIỆU
 </div>
 """, unsafe_allow_html=True)
 
-# Khung cấu hình Đơn vị & Logo (Thu gọn mặc định để tiết kiệm diện tích màn hình điện thoại)
-with st.expander("⚙️ Cấu hình Tên Đơn vị, Thể loại & Logo Truyền hình", expanded=False):
+# Khung cấu hình Đơn vị & Logo
+with st.expander("⚙️ Tên đơn vị & Logo", expanded=False):
     col_u1, col_u2 = st.columns(2)
     with col_u1:
         the_loai_input = st.text_input(
-            "📺 Thể loại chương trình / Phóng sự",
+            "Thể loại:",
             value=the_loai_default,
-            placeholder="Ví dụ: Bản tin thời sự cơ sở, Phóng sự địa phương, Chuyên mục Đại đoàn kết...",
-            help="Chọn hoặc nhập thể loại phóng sự, bản tin phù hợp với mục đích tuyên truyền."
+            placeholder="Bản tin, phóng sự..."
         )
     with col_u2:
         co_quan_input = st.text_input(
-            "🏛️ Cơ quan / Đơn vị thực hiện",
+            "Đơn vị thực hiện:",
             value=co_quan_default,
-            placeholder="Ví dụ: UBND Xã ..., UBMTTQVN Huyện ..., Đoàn Thanh niên...",
-            help="Tên cơ quan, đơn vị sẽ hiển thị trên Lower-Third và được lồng vào lời bình của BTV."
+            placeholder="UBND Xã, Ban ngành..."
         )
         
     col_l1, col_l2 = st.columns(2)
     with col_l1:
         logo_file = st.file_uploader(
-            "🏷️ Tải biểu trưng / Logo đơn vị (PNG/JPG)",
-            type=["png", "jpg", "jpeg"],
-            help="Tải lên logo đơn vị hoặc đài. Nếu để trống, hệ thống dùng Logo truyền hình cơ sở chuẩn."
+            "Logo (PNG/JPG):",
+            type=["png", "jpg", "jpeg"]
         )
     with col_l2:
         logo_subtext_input = st.text_input(
-            "✍️ Dòng chữ dưới Logo trong video",
+            "Chữ dưới logo:",
             value="",
-            placeholder="Ví dụ: Hội Nông dân, UBND Xã... (Để trống nếu chỉ hiển thị biểu trưng)",
-            help="Dòng chữ nhỏ nằm dưới biểu trưng ở góc trên video."
+            placeholder="Để trống nếu chỉ hiện logo"
         )
         logo_pos = st.selectbox(
-            "📍 Vị trí hiển thị Logo",
-            options=["Top-Right (Góc trên phải)", "Top-Left (Góc trên trái)"],
-            index=0,
-            help="Chọn vị trí đặt biểu trưng logo và dòng chữ đơn vị trong video."
+            "Vị trí logo:",
+            options=["Góc trên phải", "Góc trên trái"],
+            index=0
         )
-        logo_pos_val = "Top-Left" if "Top-Left" in logo_pos else "Top-Right"
+        logo_pos_val = "Top-Left" if "trái" in logo_pos.lower() else "Top-Right"
 
 if 'the_loai_input' not in locals() or not the_loai_input.strip():
     the_loai_input = "Bản tin thời sự cơ sở"
@@ -1014,23 +1009,23 @@ if 'logo_file' in locals() and logo_file is not None:
 else:
     active_logo_path = DEFAULT_LOGO_PATH
 
-# Thanh trạng thái thông tin nhanh
+# Thanh trạng thái
 display_unit = logo_subtext_input.strip() or co_quan_input.strip() or "Đơn vị cơ sở"
 st.markdown(f"""
 <div class="tv-status-bar">
     <div><strong>📺 {the_loai_input.upper()}</strong> &nbsp;|&nbsp; Đơn vị: <span style="color: #FFD166; font-weight: 700;">{display_unit}</span></div>
     <div class="tv-status-tags">
         <span class="tv-chip">Logo: {logo_pos_val}</span>
-        <span class="tv-chip">Quy trình: 1-Chạm A-Z</span>
+        <span class="tv-chip">Quy trình: 1-Chạm</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# 1. Chọn định dạng tư liệu hiện trường
-st.markdown("##### 🎬 1. Nguồn tư liệu hiện trường:")
+# 1. Tư liệu hiện trường
+st.markdown("##### 🎬 1. Tư liệu hiện trường:")
 input_type = st.radio(
     "Định dạng tư liệu hiện trường:",
-    options=["Bộ ảnh hoạt động / cơ sở (Nhiều ảnh JPG/PNG)", "Video tư liệu hiện trường (MP4, MOV)"],
+    options=["Bộ ảnh (JPG/PNG)", "Video (MP4/MOV)"],
     index=0,
     horizontal=True,
     label_visibility="collapsed"
@@ -1041,125 +1036,108 @@ selected_files = []
 
 if selected_source_type == "photo":
     uploaded_photos = st.file_uploader(
-        "📸 Tải ảnh từ thiết bị (Chọn nhiều ảnh cùng lúc từ thư viện hoặc máy ảnh):",
+        "Chọn ảnh từ thiết bị:",
         type=["jpg", "jpeg", "png", "webp"],
-        accept_multiple_files=True,
-        help="Chọn các bức ảnh hoạt động, công trình, hội nghị tại cơ sở để tự động ghép thành slideshow phóng sự."
+        accept_multiple_files=True
     )
     if uploaded_photos:
         selected_files = [up.getvalue() for up in uploaded_photos]
-        st.success(f"✅ Đã nhận {len(selected_files)} ảnh tư liệu từ thiết bị của bạn.")
+        st.success(f"✅ Đã nhận {len(selected_files)} ảnh.")
         preview_count = min(len(selected_files), 4)
-        # Hiển thị lưới ảnh 2 cột tối ưu cho điện thoại
         p_cols = st.columns(2)
         for i in range(preview_count):
             with p_cols[i % 2]:
                 st.image(selected_files[i], caption=f"Ảnh {i+1}", use_container_width=True)
         if len(selected_files) > 4:
-            st.caption(f"... và {len(selected_files) - 4} hình ảnh khác.")
-    else:
-        st.info("💡 Hãy chạm vào ô phía trên để chọn ảnh chụp hoạt động thực tế tại cơ sở của bạn.")
+            st.caption(f"... và {len(selected_files) - 4} ảnh khác.")
 else:
     uploaded_video = st.file_uploader(
-        "📹 Tải video tư liệu hiện trường (MP4, MOV, AVI):",
-        type=["mp4", "mov", "avi", "mkv", "webm"],
-        help="Tải lên video quay hoạt động thực tế tại cơ sở bằng điện thoại hoặc máy quay."
+        "Chọn video từ thiết bị:",
+        type=["mp4", "mov", "avi", "mkv", "webm"]
     )
     if uploaded_video:
         selected_files = [uploaded_video.getvalue()]
         file_mb = uploaded_video.size / (1024 * 1024)
         st.success(f"✅ Đã nhận video: **{uploaded_video.name}** ({file_mb:.1f} MB).")
-    else:
-        st.info("💡 Hãy chạm vào ô phía trên để chọn video hiện trường từ thiết bị của bạn.")
 
 st.markdown("---")
 
-# 2. Tiêu đề phóng sự
+# 2. Tiêu đề
 title_input = st.text_input(
-    "📝 2. Tiêu đề phóng sự / Bản tin:",
+    "📝 2. Tiêu đề:",
     value="",
-    placeholder="Nhập tiêu đề phóng sự hoặc bản tin thời sự của đơn vị bạn...",
-    help="Tiêu đề sẽ được biên tập vào lời bình và hiển thị nổi bật trên thanh Lower-Third của video."
+    placeholder="Nhập tiêu đề phóng sự / bản tin..."
 )
 
-# 3. Ý tưởng / Số liệu / Ghi chú sự kiện
+# 3. Nội dung sự kiện / Số liệu
 notes_input = st.text_area(
-    "📊 3. Ý tưởng / Số liệu / Ghi chú sự kiện thực tế:",
+    "📊 3. Nội dung / Số liệu sự kiện:",
     value="",
-    height=120,
-    placeholder="Nhập tóm tắt các hoạt động, sự kiện, thành tựu, số liệu thực tế tại cơ sở (Ví dụ: số hộ được hỗ trợ, công trình hoàn thành, ý kiến nhân dân...) để AI tự động biên soạn thành lời bình phát thanh chuẩn mực...",
-    help="Cung cấp số liệu cụ thể giúp bản tin có tính thuyết phục và chuẩn văn phong báo chí."
+    height=110,
+    placeholder="Nhập các sự kiện chính, số liệu thực tế để AI viết lời bình..."
 )
 
-# 4. Giọng đọc BTV & Tỷ lệ khung hình
+# 4. Giọng đọc & 5. Khung hình
 col_v1, col_v2 = st.columns(2)
 with col_v1:
     voice_choice = st.selectbox(
-        "🎙️ 4. Giọng đọc phát thanh viên Nam Bộ:",
-        options=[
-            "Giọng Nam Nam Bộ (Trầm ấm, đĩnh đạc) - vi-VN-NamMinhNeural",
-            "Giọng Nữ Nam Bộ (Truyền cảm, dịu dàng) - vi-VN-HoaiMyNeural"
-        ],
+        "🎙️ 4. Giọng đọc:",
+        options=["Nam Nam Bộ", "Nữ Nam Bộ"],
         index=0
     )
     voice_name = "vi-VN-NamMinhNeural" if "Nam" in voice_choice else "vi-VN-HoaiMyNeural"
 
 with col_v2:
     aspect_choice = st.selectbox(
-        "📐 5. Định dạng tỷ lệ khung hình video:",
-        options=[
-            "16:9 Ngang (YouTube, Facebook, Cổng TT)",
-            "9:16 Dọc (TikTok, Facebook Reels, Shorts)"
-        ],
-        index=0,
-        help="Chọn 16:9 cho truyền hình/Facebook/YouTube hoặc 9:16 cho TikTok/Reels/Shorts."
+        "📐 5. Khung hình:",
+        options=["16:9 (Ngang)", "9:16 (Dọc)"],
+        index=0
     )
     aspect_ratio_val = "9:16" if "9:16" in aspect_choice else "16:9"
 
-# --- BỎ PHẦN 6 & 7 KHỎI MÀN HÌNH CHÍNH (Gán ngầm mặc định chuẩn truyền hình) ---
-# Tự động gán mặc định Nhạc nền thời sự chính luận (ducking 15%) & Hiệu ứng điện ảnh
+# Cấu hình mặc định ngầm cho BGM & VFX
 active_bgm_path = BGM_CHINH_LUAN_PATH
 ducking_vol = 0.15
-vfx_choice = "🎬 Phóng sự Điện ảnh (Chuyển cảnh mượt mà + Màu truyền hình sắc nét)"
-bgm_summary_label = "Thời sự chính luận (Giảm 15%)"
-vfx_summary_label = "Phóng sự Điện ảnh"
+vfx_choice = "Điện ảnh (Mượt + Sắc nét)"
+bgm_summary_label = "Chính luận (15%)"
+vfx_summary_label = "Điện ảnh"
 
-# Tùy chọn nâng cao (Thu gọn mặc định - Chỉ dành cho ai muốn đổi nhạc riêng hoặc tắt hiệu ứng)
-with st.expander("⚙️ Tùy chọn nâng cao: Đổi Nhạc Nền (BGM) & Hiệu Ứng (VFX)", expanded=False):
+# Tùy chọn nâng cao (Thu gọn mặc định)
+with st.expander("⚙️ Tùy chọn: Nhạc nền & Hiệu ứng", expanded=False):
     adv_col1, adv_col2 = st.columns(2)
     with adv_col1:
-        use_bgm = st.checkbox("Bật nhạc nền phóng sự", value=True)
+        use_bgm = st.checkbox("Bật nhạc nền", value=True)
         if use_bgm:
             bgm_genre = st.selectbox(
-                "Chọn phong cách nhạc nền:",
+                "Phong cách nhạc:",
                 options=[
-                    "🎺 Thời sự - Chính luận trang trọng (Chuẩn VTV/HTV)",
-                    "🌾 Nông thôn mới & Đại đoàn kết (Phấn khởi, tươi vui)",
-                    "🎻 Phóng sự - Gương sáng cơ sở (Truyền cảm, sâu lắng)",
-                    "📁 Tải lên nhạc nền tùy chọn từ thiết bị (.mp3, .wav)"
+                    "Thời sự chính luận",
+                    "Nông thôn mới",
+                    "Phóng sự truyền cảm",
+                    "Tải lên file riêng"
                 ],
                 index=0
             )
             ducking_choice = st.selectbox(
-                "🎚️ Mức giảm nhạc khi BTV đọc (Ducking):",
+                "Mức giảm nhạc (Ducking):",
                 options=[
-                    "Giảm 15% (Chuẩn truyền hình - Khuyên dùng)",
-                    "Giảm 10% (Nhẹ, nhạc to hơn)",
-                    "Giảm 20% (Rõ giọng BTV)",
-                    "Giảm 25% (Nhạc nền rất nhỏ)"
+                    "15% (Chuẩn)",
+                    "10% (Nhẹ)",
+                    "20% (Rõ giọng)",
+                    "25% (Nhạc nhỏ)"
                 ],
                 index=0
             )
             ducking_map = {
-                "Giảm 15% (Chuẩn truyền hình - Khuyên dùng)": 0.15,
-                "Giảm 10% (Nhẹ, nhạc to hơn)": 0.25,
-                "Giảm 20% (Rõ giọng BTV)": 0.10,
-                "Giảm 25% (Nhạc nền rất nhỏ)": 0.05
+                "15% (Chuẩn)": 0.15,
+                "10% (Nhẹ)": 0.25,
+                "20% (Rõ giọng)": 0.10,
+                "25% (Nhạc nhỏ)": 0.05
             }
             ducking_vol = ducking_map.get(ducking_choice, 0.15)
             if "Tải lên" in bgm_genre:
                 custom_bgm = st.file_uploader(
-                    "Tải file nhạc nền từ thiết bị (.mp3, .wav, .m4a):",
+                    "Tải file nhạc (.mp3, .wav):",
                     type=["mp3", "wav", "m4a", "ogg"]
                 )
                 if custom_bgm:
@@ -1174,35 +1152,34 @@ with st.expander("⚙️ Tùy chọn nâng cao: Đổi Nhạc Nền (BGM) & Hi�
             else:
                 active_bgm_path = BGM_CHINH_LUAN_PATH
             
-            bgm_genre_clean = bgm_genre.split()[1] if len(bgm_genre.split()) > 1 else bgm_genre
-            bgm_summary_label = f"{bgm_genre_clean} ({ducking_choice.split()[0]})"
+            bgm_summary_label = f"{bgm_genre} ({ducking_choice.split()[0]})"
         else:
             active_bgm_path = ""
-            bgm_summary_label = "Không dùng (Chỉ giọng BTV)"
+            bgm_summary_label = "Tắt nhạc"
 
     with adv_col2:
-        use_vfx = st.checkbox("Bật hiệu ứng hình ảnh & chuyển cảnh mượt", value=True)
+        use_vfx = st.checkbox("Bật hiệu ứng hình ảnh", value=True)
         if use_vfx:
             vfx_choice = st.selectbox(
-                "Chọn hiệu ứng xử lý hình ảnh:",
+                "Hiệu ứng:",
                 options=[
-                    "🎬 Phóng sự Điện ảnh (Chuyển cảnh mượt mà + Màu truyền hình sắc nét)",
-                    "✨ Chuyển cảnh mượt mà (Smooth Crossfade Dissolve)",
-                    "🎞️ Màu sắc Truyền hình Rực rỡ (Vibrant Broadcast Color)"
+                    "Điện ảnh (Mượt + Sắc nét)",
+                    "Chuyển cảnh mượt",
+                    "Màu sắc rực rỡ"
                 ],
                 index=0
             )
-            vfx_summary_label = vfx_choice.split()[1] if len(vfx_choice.split()) > 1 else vfx_choice
+            vfx_summary_label = vfx_choice
         else:
             vfx_choice = "Tiêu chuẩn (Gốc)"
-            vfx_summary_label = "Không dùng (Gốc)"
+            vfx_summary_label = "Gốc"
 
-# --- KHUNG KỊCH BẢN TÙY CHỌN (Thu gọn mặc định, tự động tạo nếu bỏ qua) ---
-with st.expander("📝 Xem trước hoặc chỉnh sửa kịch bản lời bình (Tùy chọn — Tự động tạo nếu để trống)", expanded=False):
+# Khung kịch bản (Tùy chọn)
+with st.expander("📝 Kịch bản lời bình (Tùy chọn — AI tự viết nếu để trống)", expanded=False):
     btn_col1, btn_col2 = st.columns([1.2, 1])
     with btn_col1:
-        if st.button("✨ Soạn Thử Kịch Bản Bằng AI", key="btn_preview_script"):
-            with st.spinner("Đang phân tích số liệu và biên soạn nội dung phát thanh chuẩn thời sự..."):
+        if st.button("✨ AI soạn kịch bản", key="btn_preview_script"):
+            with st.spinner("Đang soạn lời bình..."):
                 generated = generate_broadcast_script(
                     the_loai=the_loai_input,
                     co_quan=co_quan_input,
@@ -1216,7 +1193,7 @@ with st.expander("📝 Xem trước hoặc chỉnh sửa kịch bản lời bìn
                 st.rerun()
 
     with btn_col2:
-        if st.button("📋 Nạp Kịch Bản Mẫu Chuẩn", key="btn_preview_sample"):
+        if st.button("📋 Kịch bản mẫu", key="btn_preview_sample"):
             sampled = generate_default_script(
                 the_loai=the_loai_input,
                 co_quan=co_quan_input,
@@ -1235,32 +1212,30 @@ with st.expander("📝 Xem trước hoặc chỉnh sửa kịch bản lời bìn
         st.session_state.text_area_ssml = st.session_state.ssml_text
 
     st.text_area(
-        "Nội dung phát thanh / Lời bình phóng sự (Có thể chỉnh sửa trực tiếp):",
+        "Nội dung lời bình:",
         value=st.session_state.script_text,
-        height=140,
+        height=130,
         key="text_area_script",
         on_change=on_script_change,
-        placeholder="Để trống nếu muốn hệ thống tự động soạn thảo dựa trên ý tưởng/số liệu bạn đã nhập..."
+        placeholder="Để trống để AI tự viết..."
     )
 
     def on_ssml_change():
         st.session_state.ssml_text = st.session_state.text_area_ssml
 
-    with st.expander("⏱️ Cấu trúc ngắt nhịp phát thanh chuẩn SSML", expanded=False):
+    with st.expander("⏱️ Cấu trúc ngắt nhịp (SSML)", expanded=False):
         st.text_area(
-            "Cấu trúc nhịp điệu phát thanh:",
+            "Nhịp điệu phát thanh:",
             value=st.session_state.ssml_text,
-            height=100,
+            height=90,
             key="text_area_ssml",
             on_change=on_ssml_change
         )
 
-# =====================================================================
-# NÚT BẤM DUY NHẤT: BẮT ĐẦU TẠO VIDEO TỰ ĐỘNG TỪ A ĐẾN Z (1-CHẠM)
-# =====================================================================
-st.markdown("<div style='margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+# Nút tạo video
+st.markdown("<div style='margin-top: 18px; margin-bottom: 18px;'>", unsafe_allow_html=True)
 render_btn = st.button(
-    "🚀 BẮT ĐẦU TẠO VIDEO PHÓNG SỰ (1-CHẠM TỰ ĐỘNG TỪ A ĐẾN Z)",
+    "🚀 TẠO VIDEO NGAY (1-CHẠM)",
     key="btn_auto_render",
     type="primary",
     use_container_width=True
@@ -1269,13 +1244,13 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 if render_btn:
     if len(selected_files) == 0:
-        st.error("⚠️ Vui lòng tải lên ít nhất một hình ảnh hoặc video tư liệu hiện trường ở mục 1 trước khi tạo video.")
+        st.error("⚠️ Vui lòng tải lên ít nhất một ảnh hoặc video ở mục 1.")
         st.stop()
 
-    # 1. Tự động soạn kịch bản nếu người dùng chưa soạn trước
+    # 1. Soạn kịch bản
     script_to_speak = st.session_state.script_text.strip()
     if not script_to_speak:
-        with st.spinner("🤖 [Bước 1/3] Đang phân tích số liệu và tự động soạn kịch bản lời bình chuẩn thời sự..."):
+        with st.spinner("🤖 [1/3] AI đang viết lời bình..."):
             generated = generate_broadcast_script(
                 the_loai=the_loai_input,
                 co_quan=co_quan_input,
@@ -1288,9 +1263,9 @@ if render_btn:
             st.session_state.text_area_ssml = st.session_state.ssml_text
             script_to_speak = generated
 
-    # 2. Tự động thu âm giọng đọc BTV
+    # 2. Thu âm
     temp_audio_file = os.path.join(tempfile.gettempdir(), f"btv_voice_{int(sys.version_info[0])}.mp3")
-    with st.spinner("🎙️ [Bước 2/3] Đang tự động thu âm giọng đọc phát thanh viên Nam Bộ..."):
+    with st.spinner("🎙️ [2/3] Đang thu âm giọng đọc..."):
         try:
             asyncio.run(synthesize_speech(
                 text_or_ssml=script_to_speak,
@@ -1299,10 +1274,10 @@ if render_btn:
             ))
             st.session_state.recorded_audio_path = temp_audio_file
         except Exception as e:
-            st.error(f"Lỗi khi thu âm: {str(e)}")
+            st.error(f"Lỗi thu âm: {str(e)}")
             st.stop()
 
-    # 3. Tự động Render video hoàn chỉnh
+    # 3. Render video
     render_progress = st.progress(0)
     render_status = st.empty()
     output_video_file = os.path.join(tempfile.gettempdir(), f"final_phong_su_{aspect_ratio_val.replace(':', '_')}.mp4")
@@ -1327,16 +1302,14 @@ if render_btn:
             status_text=render_status
         )
         st.session_state.rendered_video_path = output_video_file
-        st.success("🎉 Tạo video phóng sự thành công! Bạn có thể xem, tải về hoặc đăng ngay bên dưới.")
+        st.success("✅ Xuất video thành công!")
     except Exception as e:
-        st.error(f"Lỗi khi render video: {str(e)}")
+        st.error(f"Lỗi render video: {str(e)}")
 
-# =====================================================================
-# KHU VỰC KẾT QUẢ: XEM VIDEO, TẢI VỀ & CHIA SẺ ĐA NỀN TẢNG
-# =====================================================================
+# Kết quả
 if st.session_state.rendered_video_path and os.path.exists(st.session_state.rendered_video_path):
     st.markdown("---")
-    st.markdown(f"#### 📺 Video Phóng sự Hoàn Chỉnh ({aspect_choice.split()[0]}):")
+    st.markdown(f"#### 📺 Video hoàn chỉnh ({aspect_choice.split()[0]}):")
     st.video(st.session_state.rendered_video_path)
     
     col_dl1, col_dl2 = st.columns(2)
@@ -1345,7 +1318,7 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
         with open(st.session_state.rendered_video_path, "rb") as vf:
             video_bytes = vf.read()
             st.download_button(
-                label="📥 Tải Video Phóng Sự Về Máy (.mp4)",
+                label="📥 Tải Video (.mp4)",
                 data=video_bytes,
                 file_name=f"phong_su_{clean_unit_filename}_{aspect_ratio_val.replace(':', '_')}.mp4",
                 mime="video/mp4",
@@ -1359,7 +1332,7 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
             with open(st.session_state.recorded_audio_path, "rb") as af:
                 audio_bytes = af.read()
                 st.download_button(
-                    label="📻 Tải File Âm Thanh Loa Xã/Phường (.mp3)",
+                    label="📻 Tải Âm Thanh (.mp3)",
                     data=audio_bytes,
                     file_name=f"ban_tin_phat_thanh_{unit_slug}.mp3",
                     mime="audio/mp3",
@@ -1367,36 +1340,36 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
                     use_container_width=True
                 )
 
-    # 🚀 TÍNH NĂNG XUẤT VIDEO THẲNG VÔ FACEBOOK, YOUTUBE, TIKTOK, ZALO
+    # Đăng lên mạng xã hội
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #091e3a 0%, #102e56 100%); border: 2px solid #FFB800; border-radius: 12px; padding: 18px 20px; margin-top: 22px; color: #ffffff; box-shadow: 0 8px 20px rgba(0,35,70,0.25);">
-        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,184,0,0.35); padding-bottom: 10px; margin-bottom: 12px;">
-            <div style="font-size: 16px; font-weight: 800; color: #FFB800; letter-spacing: 0.5px;">
-                📲 ĐĂNG VIDEO LÊN MẠNG XÃ HỘI
+    <div style="background: linear-gradient(135deg, #091e3a 0%, #102e56 100%); border: 2px solid #FFB800; border-radius: 12px; padding: 16px 18px; margin-top: 18px; color: #ffffff;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,184,0,0.35); padding-bottom: 8px; margin-bottom: 10px;">
+            <div style="font-size: 15px; font-weight: 800; color: #FFB800;">
+                📲 ĐĂNG LÊN MẠNG XÃ HỘI
             </div>
-            <span style="background: #D90429; color: #ffffff; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 700;">1-CHẠM UPLOAD</span>
+            <span style="background: #D90429; color: #ffffff; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">1-CHẠM</span>
         </div>
-        <div style="font-size: 13.5px; color: #e1edff; line-height: 1.5; margin-bottom: 14px;">
-            Chạm vào các nút bên dưới để mở thẳng trình đăng video của từng mạng xã hội:
+        <div style="font-size: 13px; color: #e1edff; margin-bottom: 12px;">
+            Mở nhanh trang đăng video:
         </div>
         <div class="social-grid">
             <a href="https://chat.zalo.me/" target="_blank" class="social-btn btn-zalo">
-                <span>💬</span> Gửi qua Zalo
+                <span>💬</span> Zalo
             </a>
             <a href="https://business.facebook.com/latest/content_management" target="_blank" class="social-btn btn-facebook">
-                <span>🔵</span> Đăng lên Facebook
+                <span>🔵</span> Facebook
             </a>
             <a href="https://studio.youtube.com/channel/_/videos/upload?d=pt" target="_blank" class="social-btn btn-youtube">
-                <span>🔴</span> Tải lên YouTube
+                <span>🔴</span> YouTube
             </a>
             <a href="https://www.tiktok.com/creator-center/upload?from=webapp" target="_blank" class="social-btn btn-tiktok">
-                <span>⚫</span> Tải lên TikTok
+                <span>⚫</span> TikTok
             </a>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Bộ nội dung & Hashtags tạo sẵn để dán ngay
+    # Tiêu đề & Hashtags
     clean_tag_unit = re.sub(r'[^a-zA-Z0-9_]', '', co_quan_input.replace(' ', '_').lower())
     hashtag_unit_str = f"#{clean_tag_unit} " if clean_tag_unit else ""
     auto_caption = f"""{title_input.strip() or 'BẢN TIN PHÓNG SỰ'}
@@ -1409,25 +1382,24 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
 ---
 #phongsu #thoisu {hashtag_unit_str}#truyenhinhcoso #tintuc24h #daidoanket #nongthonmoi #xuhuong #fyp"""
 
-    with st.expander("📋 Xem & Sao chép Tiêu đề + Nội dung mô tả + Hashtags đã tối ưu sẵn", expanded=True):
+    with st.expander("📋 Tiêu đề & Hashtags đăng bài", expanded=True):
         st.text_area(
-            "Nội dung chuẩn SEO sẵn sàng Copy-Paste vào Zalo / Facebook / YouTube / TikTok:",
+            "Nội dung bài đăng:",
             value=auto_caption,
-            height=180,
+            height=150,
             key="social_copy_text"
         )
-        st.caption("💡 Mẹo: Bấm 'Tải Video' ở trên về máy, sau đó chạm nút mạng xã hội (Zalo, Facebook, YouTube, TikTok) tương ứng và dán nội dung này vào bài đăng!")
+        st.caption("💡 Mẹo: Bấm Tải video ở trên, rồi dán nội dung này vào bài đăng.")
 
-    with st.expander("📖 Xem lại kịch bản lời bình phát thanh viên đã đọc", expanded=False):
+    with st.expander("📖 Lời bình đã đọc", expanded=False):
         st.write(st.session_state.script_text)
         if st.session_state.recorded_audio_path and os.path.exists(st.session_state.recorded_audio_path):
             st.audio(st.session_state.recorded_audio_path, format="audio/mp3")
 
 
-# --- Footer Thông tin ---
+# --- Footer ---
 st.markdown("""
-<div style="text-align: center; color: #64748b; font-size: 13px; margin-top: 36px; padding-top: 18px; border-top: 1px solid #cbd5e1; line-height: 1.6;">
-    <strong>Hệ thống Biên tập Video Phóng sự Địa phương</strong> • Tối ưu di động đa nền tảng • Lower-Third 10% Auto-Hide<br>
-    © Bản quyền ứng dụng thuộc: <strong>CÔNG TY TNHH MTV GIẢI PHÁP THANH TOÁN TRỰC TUYẾN SÓC TRĂNG</strong>
+<div style="text-align: center; color: #64748b; font-size: 13px; margin-top: 28px; padding-top: 14px; border-top: 1px solid #cbd5e1;">
+    <strong>Biên tập Video Phóng sự</strong> • Bản quyền: <strong>CÔNG TY TNHH MTV GIẢI PHÁP THANH TOÁN TRỰC TUYẾN SÓC TRĂNG</strong>
 </div>
 """, unsafe_allow_html=True)
