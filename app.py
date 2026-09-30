@@ -1220,14 +1220,18 @@ def render_full_report_video(
 
 
 # --- Session State Initialization ---
-if "script_text" not in st.session_state:
-    st.session_state.script_text = ""
-if "text_area_script" not in st.session_state:
-    st.session_state.text_area_script = ""
-if "subtitle_text" not in st.session_state:
-    st.session_state.subtitle_text = ""
-if "text_area_subtitle" not in st.session_state:
-    st.session_state.text_area_subtitle = ""
+if "script_text_vi" not in st.session_state:
+    st.session_state.script_text_vi = ""
+if "text_area_script_vi" not in st.session_state:
+    st.session_state.text_area_script_vi = ""
+if "script_text_km" not in st.session_state:
+    st.session_state.script_text_km = ""
+if "text_area_script_km" not in st.session_state:
+    st.session_state.text_area_script_km = ""
+if "subtitle_text_km" not in st.session_state:
+    st.session_state.subtitle_text_km = ""
+if "text_area_sub_km" not in st.session_state:
+    st.session_state.text_area_sub_km = ""
 if "ssml_text" not in st.session_state:
     st.session_state.ssml_text = ""
 if "text_area_ssml" not in st.session_state:
@@ -1240,6 +1244,8 @@ if "rendered_ass_path" not in st.session_state:
     st.session_state.rendered_ass_path = None
 if "rendered_srt_path" not in st.session_state:
     st.session_state.rendered_srt_path = None
+if "has_subtitles" not in st.session_state:
+    st.session_state.has_subtitles = False
 
 
 # --- APP INTERFACE ---
@@ -1367,11 +1373,18 @@ else:
 
 # Thanh trạng thái
 display_unit = logo_subtext_input.strip() or co_quan_input.strip() or "Đơn vị cơ sở"
+current_mode_is_km = "Khmer" in st.session_state.get("selected_video_mode", "Tiếng Kinh")
+current_has_sub = st.session_state.get("enable_subtitles_chk", False)
+
+mode_badge = "🇰🇭 BTV Tiếng Khmer" if current_mode_is_km else "🇻🇳 BTV Tiếng Kinh"
+sub_badge = "💬 Có phụ đề tiếng Việt" if current_has_sub else "🚫 Không phụ đề"
+
 st.markdown(f"""
 <div class="tv-status-bar">
     <div><strong>📺 {the_loai_input.upper()}</strong> &nbsp;|&nbsp; Đơn vị: <span style="color: #FFD166; font-weight: 700;">{display_unit}</span></div>
     <div class="tv-status-tags">
-        <span class="tv-chip">🎙️ 🇰🇭 Tiếng Khmer & 🇻🇳 Phụ đề</span>
+        <span class="tv-chip">🎙️ {mode_badge}</span>
+        <span class="tv-chip">{sub_badge}</span>
         <span class="tv-chip">Logo: {logo_pos_val}</span>
         <span class="tv-chip">⚡ Xử lý tự động AI</span>
     </div>
@@ -1434,56 +1447,58 @@ notes_input = st.text_area(
     placeholder="Nhập các sự kiện chính, số liệu thực tế để AI viết lời bình..."
 )
 
-# 4. Ngôn ngữ & Giọng đọc & 5. Khung hình
-col_v1, col_v2, col_v3 = st.columns([1.2, 1.3, 1.1])
-with col_v1:
-    lang_choice = st.selectbox(
-        "🌐 4. Ngôn ngữ phát thanh:",
-        options=["Tiếng Khmer (🇰🇭)", "Tiếng Việt (🇻🇳)"],
-        index=0,
-        help="Chọn ngôn ngữ phát thanh viên đọc lời bình phóng sự"
-    )
-    is_khmer = "Khmer" in lang_choice
+# 4. Chế độ video & Giọng đọc BTV & Khung hình
+st.markdown("##### 🌐 4. Chế độ video phóng sự & Giọng đọc BTV:")
 
-with col_v2:
+mode_c1, mode_c2 = st.columns([1.6, 1.2])
+with mode_c1:
+    selected_mode = st.radio(
+        "Chọn chế độ video phóng sự:",
+        options=["🇻🇳 Video Tiếng Kinh (Tiếng Việt)", "🇰🇭 Video Tiếng Khmer"],
+        index=0,
+        horizontal=True,
+        key="selected_video_mode"
+    )
+    is_khmer = "Khmer" in selected_mode
+
+with mode_c2:
+    aspect_choice = st.selectbox(
+        "📐 Tỷ lệ khung hình:",
+        options=["16:9 (Ngang - TV/FB/YT)", "9:16 (Dọc - TikTok/Reels)"],
+        index=0
+    )
+    aspect_ratio_val = "9:16" if "9:16" in aspect_choice else "16:9"
+
+col_v1, col_v2 = st.columns([1.4, 1.4])
+with col_v1:
     if is_khmer:
         voice_choice = st.selectbox(
-            "🎙️ Giọng đọc BTV Khmer:",
+            "🎙️ Giọng đọc BTV Tiếng Khmer:",
             options=["Nữ Khmer (Sreymom)", "Nam Khmer (Piseth)"],
             index=0
         )
         voice_name = "km-KH-SreymomNeural" if ("Nữ" in voice_choice or "Sreymom" in voice_choice) else "km-KH-PisethNeural"
     else:
         voice_choice = st.selectbox(
-            "🎙️ Giọng đọc BTV Tiếng Việt:",
+            "🎙️ Giọng đọc BTV Tiếng Kinh (Nam Bộ):",
             options=["Nữ Nam Bộ (Hoài My)", "Nam Nam Bộ (Nam Minh)"],
             index=0
         )
         voice_name = "vi-VN-HoaiMyNeural" if ("Nữ" in voice_choice or "Hoài My" in voice_choice) else "vi-VN-NamMinhNeural"
 
-with col_v3:
-    aspect_choice = st.selectbox(
-        "📐 5. Khung hình:",
-        options=["16:9 (Ngang)", "9:16 (Dọc)"],
-        index=0
-    )
-    aspect_ratio_val = "9:16" if "9:16" in aspect_choice else "16:9"
-
-# Tùy chọn Phụ đề tiếng Việt
-enable_subtitles = st.checkbox(
-    "📺 Hiển thị phụ đề tiếng Việt trên video",
-    value=True,
-    help="Hiển thị phụ đề tiếng Việt chuẩn đồ họa truyền hình, đồng bộ chính xác với lời bình BTV (đặc biệt khi phát thanh tiếng Khmer)"
-)
-
-# Nghe thử giọng đọc trực tiếp
-preview_audio_file = VOICE_PREVIEWS.get(voice_name)
-if preview_audio_file and os.path.exists(preview_audio_file):
-    col_prev_t, col_prev_a = st.columns([1.2, 2.8])
-    with col_prev_t:
-        st.markdown(f"<div style='font-size: 13.5px; font-weight: 700; color: #003366; padding-top: 10px;'>🔊 Nghe thử giọng ({voice_choice.split()[0]}):</div>", unsafe_allow_html=True)
-    with col_prev_a:
+with col_v2:
+    preview_audio_file = VOICE_PREVIEWS.get(voice_name)
+    if preview_audio_file and os.path.exists(preview_audio_file):
+        st.markdown(f"<div style='font-size: 13px; font-weight: 700; color: #003366; margin-bottom: 4px;'>🔊 Nghe thử giọng ({voice_choice.split()[0]}):</div>", unsafe_allow_html=True)
         st.audio(preview_audio_file, format="audio/mp3")
+
+# Tùy chọn Phụ đề tiếng Việt (CHỈ TẠO KHI NGƯỜI DÙNG KÍCH CHỌN)
+enable_subtitles = st.checkbox(
+    "💬 Tạo phụ đề tiếng Việt trên video",
+    value=False,
+    key="enable_subtitles_chk",
+    help="Mặc định không tạo phụ đề để khung hình video thông thoáng, sạch sẽ. Chỉ kích chọn khi bạn muốn hiển thị dòng chữ phụ đề chạy theo lời bình BTV trên video."
+)
 
 # Cấu hình mặc định ngầm cho BGM & VFX
 active_bgm_path = BGM_CHINH_LUAN_PATH
@@ -1565,91 +1580,137 @@ with st.expander("⚙️ Tùy chọn: Nhạc nền & Hiệu ứng", expanded=Fal
             vfx_summary_label = "Gốc"
 
 # Khung kịch bản (Tùy chọn)
-with st.expander("📝 Kịch bản lời bình & Phụ đề tiếng Việt (Tùy chọn — AI tự viết nếu để trống)", expanded=False):
-    if is_khmer:
-        btn_col1, btn_col2, btn_col3 = st.columns([1.5, 1.2, 1.3])
-        with btn_col1:
-            if st.button("✨ AI soạn kịch bản (Khmer + Phụ đề Việt)", key="btn_preview_script_km"):
-                with st.spinner("Đang soạn kịch bản tiếng Khmer & phụ đề tiếng Việt..."):
-                    gen_km, gen_vi = generate_broadcast_script(
+if is_khmer:
+    script_box_title = "📝 Kịch bản lời bình Tiếng Khmer & Phụ đề tiếng Việt (Tùy chọn — AI tự viết nếu để trống)" if enable_subtitles else "📝 Kịch bản lời bình BTV Tiếng Khmer (Tùy chọn — AI tự viết nếu để trống)"
+    with st.expander(script_box_title, expanded=False):
+        if enable_subtitles:
+            btn_col1, btn_col2, btn_col3 = st.columns([1.5, 1.2, 1.3])
+            with btn_col1:
+                if st.button("✨ AI soạn kịch bản (Khmer + Phụ đề)", key="btn_preview_script_km"):
+                    with st.spinner("Đang soạn kịch bản tiếng Khmer & phụ đề tiếng Việt..."):
+                        gen_km, gen_vi = generate_broadcast_script(
+                            the_loai=the_loai_input,
+                            co_quan=co_quan_input,
+                            tieu_de=title_input,
+                            y_tuong=notes_input,
+                            is_khmer=True
+                        )
+                        st.session_state.script_text_km = gen_km
+                        st.session_state.text_area_script_km = gen_km
+                        st.session_state.subtitle_text_km = gen_vi
+                        st.session_state.text_area_sub_km = gen_vi
+                        st.session_state.ssml_text = text_to_ssml(gen_km, voice_name)
+                        st.session_state.text_area_ssml = st.session_state.ssml_text
+                        st.rerun()
+
+            with btn_col2:
+                if st.button("📋 Kịch bản mẫu", key="btn_preview_sample_km"):
+                    sample_km, sample_vi = generate_default_script(
                         the_loai=the_loai_input,
                         co_quan=co_quan_input,
                         tieu_de=title_input,
                         y_tuong=notes_input,
                         is_khmer=True
                     )
-                    st.session_state.script_text = gen_km
-                    st.session_state.text_area_script = gen_km
-                    st.session_state.subtitle_text = gen_vi
-                    st.session_state.text_area_subtitle = gen_vi
-                    st.session_state.ssml_text = text_to_ssml(gen_km, voice_name)
+                    st.session_state.script_text_km = sample_km
+                    st.session_state.text_area_script_km = sample_km
+                    st.session_state.subtitle_text_km = sample_vi
+                    st.session_state.text_area_sub_km = sample_vi
+                    st.session_state.ssml_text = text_to_ssml(sample_km, voice_name)
                     st.session_state.text_area_ssml = st.session_state.ssml_text
                     st.rerun()
 
-        with btn_col2:
-            if st.button("📋 Kịch bản mẫu", key="btn_preview_sample_km"):
-                sample_km, sample_vi = generate_default_script(
-                    the_loai=the_loai_input,
-                    co_quan=co_quan_input,
-                    tieu_de=title_input,
-                    y_tuong=notes_input,
-                    is_khmer=True
-                )
-                st.session_state.script_text = sample_km
-                st.session_state.text_area_script = sample_km
-                st.session_state.subtitle_text = sample_vi
-                st.session_state.text_area_subtitle = sample_vi
-                st.session_state.ssml_text = text_to_ssml(sample_km, voice_name)
-                st.session_state.text_area_ssml = st.session_state.ssml_text
-                st.rerun()
+            with btn_col3:
+                if st.button("🔄 Dịch phụ đề sang Khmer", key="btn_trans_vi_to_km", help="Tự động dịch nội dung ô Phụ đề tiếng Việt sang Lời bình tiếng Khmer"):
+                    sub_txt = st.session_state.subtitle_text_km.strip() or st.session_state.text_area_sub_km.strip()
+                    if sub_txt:
+                        with st.spinner("Đang dịch sang tiếng Khmer..."):
+                            trans_km = translate_script_with_ai(sub_txt, to_khmer=True)
+                            st.session_state.script_text_km = trans_km
+                            st.session_state.text_area_script_km = trans_km
+                            st.session_state.ssml_text = text_to_ssml(trans_km, voice_name)
+                            st.session_state.text_area_ssml = st.session_state.ssml_text
+                            st.rerun()
 
-        with btn_col3:
-            if st.button("🔄 Dịch phụ đề sang Khmer", key="btn_trans_vi_to_km", help="Tự động dịch nội dung ô Phụ đề tiếng Việt sang Lời bình tiếng Khmer"):
-                sub_txt = st.session_state.subtitle_text.strip() or st.session_state.text_area_subtitle.strip()
-                if sub_txt:
-                    with st.spinner("Đang dịch sang tiếng Khmer..."):
-                        trans_km = translate_script_with_ai(sub_txt, to_khmer=True)
-                        st.session_state.script_text = trans_km
-                        st.session_state.text_area_script = trans_km
-                        st.session_state.ssml_text = text_to_ssml(trans_km, voice_name)
-                        st.session_state.text_area_ssml = st.session_state.ssml_text
-                        st.rerun()
-
-        tab_km, tab_vi = st.tabs(["🇰🇭 Lời bình BTV đọc (Tiếng Khmer)", "🇻🇳 Phụ đề hiển thị (Tiếng Việt)"])
-        
-        with tab_km:
             def on_script_km_change():
-                st.session_state.script_text = st.session_state.text_area_script
-                st.session_state.ssml_text = text_to_ssml(st.session_state.text_area_script, voice_name)
+                st.session_state.script_text_km = st.session_state.text_area_script_km
+                st.session_state.ssml_text = text_to_ssml(st.session_state.text_area_script_km, voice_name)
                 st.session_state.text_area_ssml = st.session_state.ssml_text
 
             st.text_area(
                 "Văn bản tiếng Khmer (BTV phát thanh đọc — mỗi dòng là một câu):",
-                value=st.session_state.script_text,
+                value=st.session_state.script_text_km,
                 height=130,
-                key="text_area_script",
+                key="text_area_script_km",
                 on_change=on_script_km_change,
                 placeholder="Nhập tiếng Khmer hoặc bấm 'AI soạn kịch bản' để tự động tạo..."
             )
 
-        with tab_vi:
-            def on_sub_vi_change():
-                st.session_state.subtitle_text = st.session_state.text_area_subtitle
+            def on_sub_km_change():
+                st.session_state.subtitle_text_km = st.session_state.text_area_sub_km
 
             st.text_area(
                 "Phụ đề tiếng Việt hiển thị trên video (tương ứng từng dòng với tiếng Khmer):",
-                value=st.session_state.subtitle_text,
+                value=st.session_state.subtitle_text_km,
                 height=130,
-                key="text_area_subtitle",
-                on_change=on_sub_vi_change,
+                key="text_area_sub_km",
+                on_change=on_sub_km_change,
                 placeholder="Nhập phụ đề tiếng Việt tương ứng từng dòng câu tiếng Khmer..."
             )
 
-    else:
-        btn_col1, btn_col2 = st.columns([1.2, 1])
+        else:
+            btn_col1, btn_col2 = st.columns([1.5, 1.2])
+            with btn_col1:
+                if st.button("✨ AI soạn kịch bản tiếng Khmer", key="btn_preview_script_km_nosub"):
+                    with st.spinner("Đang soạn kịch bản tiếng Khmer..."):
+                        gen_km, _ = generate_broadcast_script(
+                            the_loai=the_loai_input,
+                            co_quan=co_quan_input,
+                            tieu_de=title_input,
+                            y_tuong=notes_input,
+                            is_khmer=True
+                        )
+                        st.session_state.script_text_km = gen_km
+                        st.session_state.text_area_script_km = gen_km
+                        st.session_state.ssml_text = text_to_ssml(gen_km, voice_name)
+                        st.session_state.text_area_ssml = st.session_state.ssml_text
+                        st.rerun()
+
+            with btn_col2:
+                if st.button("📋 Kịch bản mẫu", key="btn_preview_sample_km_nosub"):
+                    sample_km, _ = generate_default_script(
+                        the_loai=the_loai_input,
+                        co_quan=co_quan_input,
+                        tieu_de=title_input,
+                        y_tuong=notes_input,
+                        is_khmer=True
+                    )
+                    st.session_state.script_text_km = sample_km
+                    st.session_state.text_area_script_km = sample_km
+                    st.session_state.ssml_text = text_to_ssml(sample_km, voice_name)
+                    st.session_state.text_area_ssml = st.session_state.ssml_text
+                    st.rerun()
+
+            def on_script_km_change_nosub():
+                st.session_state.script_text_km = st.session_state.text_area_script_km
+                st.session_state.ssml_text = text_to_ssml(st.session_state.text_area_script_km, voice_name)
+                st.session_state.text_area_ssml = st.session_state.ssml_text
+
+            st.text_area(
+                "Văn bản tiếng Khmer (BTV phát thanh đọc — mỗi dòng là một câu):",
+                value=st.session_state.script_text_km,
+                height=130,
+                key="text_area_script_km",
+                on_change=on_script_km_change_nosub,
+                placeholder="Nhập tiếng Khmer hoặc bấm 'AI soạn kịch bản' để tự động tạo..."
+            )
+
+else:
+    with st.expander("📝 Kịch bản lời bình BTV Tiếng Kinh (Tùy chọn — AI tự viết nếu để trống)", expanded=False):
+        btn_col1, btn_col2 = st.columns([1.4, 1])
         with btn_col1:
-            if st.button("✨ AI soạn kịch bản", key="btn_preview_script_vi"):
-                with st.spinner("Đang soạn lời bình..."):
+            if st.button("✨ AI soạn kịch bản tiếng Việt", key="btn_preview_script_vi"):
+                with st.spinner("Đang soạn lời bình tiếng Việt..."):
                     gen_vi, _ = generate_broadcast_script(
                         the_loai=the_loai_input,
                         co_quan=co_quan_input,
@@ -1657,10 +1718,8 @@ with st.expander("📝 Kịch bản lời bình & Phụ đề tiếng Việt (T�
                         y_tuong=notes_input,
                         is_khmer=False
                     )
-                    st.session_state.script_text = gen_vi
-                    st.session_state.text_area_script = gen_vi
-                    st.session_state.subtitle_text = gen_vi
-                    st.session_state.text_area_subtitle = gen_vi
+                    st.session_state.script_text_vi = gen_vi
+                    st.session_state.text_area_script_vi = gen_vi
                     st.session_state.ssml_text = text_to_ssml(gen_vi, voice_name)
                     st.session_state.text_area_ssml = st.session_state.ssml_text
                     st.rerun()
@@ -1674,40 +1733,40 @@ with st.expander("📝 Kịch bản lời bình & Phụ đề tiếng Việt (T�
                     y_tuong=notes_input,
                     is_khmer=False
                 )
-                st.session_state.script_text = sample_vi
-                st.session_state.text_area_script = sample_vi
-                st.session_state.subtitle_text = sample_vi
-                st.session_state.text_area_subtitle = sample_vi
+                st.session_state.script_text_vi = sample_vi
+                st.session_state.text_area_script_vi = sample_vi
                 st.session_state.ssml_text = text_to_ssml(sample_vi, voice_name)
                 st.session_state.text_area_ssml = st.session_state.ssml_text
                 st.rerun()
 
         def on_script_vi_change():
-            st.session_state.script_text = st.session_state.text_area_script
-            st.session_state.subtitle_text = st.session_state.text_area_script
-            st.session_state.ssml_text = text_to_ssml(st.session_state.text_area_script, voice_name)
+            st.session_state.script_text_vi = st.session_state.text_area_script_vi
+            st.session_state.ssml_text = text_to_ssml(st.session_state.text_area_script_vi, voice_name)
             st.session_state.text_area_ssml = st.session_state.ssml_text
 
         st.text_area(
-            "Nội dung lời bình & phụ đề tiếng Việt:",
-            value=st.session_state.script_text,
+            "Nội dung lời bình BTV đọc (tiếng Việt — mỗi dòng là một câu):",
+            value=st.session_state.script_text_vi,
             height=130,
-            key="text_area_script",
+            key="text_area_script_vi",
             on_change=on_script_vi_change,
-            placeholder="Để trống để AI tự viết..."
+            placeholder="Nhập nội dung lời bình hoặc để trống để AI tự biên soạn..."
         )
 
-    def on_ssml_change():
-        st.session_state.ssml_text = st.session_state.text_area_ssml
+        if enable_subtitles:
+            st.caption("💬 *Phụ đề tiếng Việt trên video sẽ tự động hiển thị đồng bộ chính xác theo từng dòng lời bình BTV ở trên.*")
 
-    with st.expander("⏱️ Cấu trúc ngắt nhịp (SSML)", expanded=False):
-        st.text_area(
-            "Nhịp điệu phát thanh:",
-            value=st.session_state.ssml_text,
-            height=90,
-            key="text_area_ssml",
-            on_change=on_ssml_change
-        )
+def on_ssml_change():
+    st.session_state.ssml_text = st.session_state.text_area_ssml
+
+with st.expander("⏱️ Cấu trúc ngắt nhịp (SSML)", expanded=False):
+    st.text_area(
+        "Nhịp điệu phát thanh:",
+        value=st.session_state.ssml_text,
+        height=90,
+        key="text_area_ssml",
+        on_change=on_ssml_change
+    )
 
 # Nút tạo video
 st.markdown("<div style='margin-top: 18px; margin-bottom: 18px;'>", unsafe_allow_html=True)
@@ -1725,62 +1784,101 @@ if render_btn:
         st.stop()
 
     # 1. Soạn kịch bản & Phụ đề nếu chưa có
-    script_to_speak = st.session_state.script_text.strip()
-    subtitles_to_use = st.session_state.subtitle_text.strip()
+    if is_khmer:
+        script_to_speak = st.session_state.script_text_km.strip()
+        subtitles_to_use = st.session_state.subtitle_text_km.strip() if enable_subtitles else ""
 
-    if not script_to_speak:
-        with st.spinner("🤖 [1/3] AI đang viết kịch bản phát thanh & phụ đề..."):
-            gen_script, gen_subs = generate_broadcast_script(
-                the_loai=the_loai_input,
-                co_quan=co_quan_input,
-                tieu_de=title_input,
-                y_tuong=notes_input,
-                is_khmer=is_khmer
-            )
-            st.session_state.script_text = gen_script
-            st.session_state.text_area_script = gen_script
-            st.session_state.subtitle_text = gen_subs
-            st.session_state.text_area_subtitle = gen_subs
-            st.session_state.ssml_text = text_to_ssml(gen_script, voice_name)
-            st.session_state.text_area_ssml = st.session_state.ssml_text
-            script_to_speak = gen_script
-            subtitles_to_use = gen_subs
+        if not script_to_speak:
+            with st.spinner("🤖 [1/3] AI đang viết kịch bản phát thanh tiếng Khmer..."):
+                gen_km, gen_vi = generate_broadcast_script(
+                    the_loai=the_loai_input,
+                    co_quan=co_quan_input,
+                    tieu_de=title_input,
+                    y_tuong=notes_input,
+                    is_khmer=True
+                )
+                st.session_state.script_text_km = gen_km
+                st.session_state.text_area_script_km = gen_km
+                st.session_state.subtitle_text_km = gen_vi
+                st.session_state.text_area_sub_km = gen_vi
+                st.session_state.ssml_text = text_to_ssml(gen_km, voice_name)
+                st.session_state.text_area_ssml = st.session_state.ssml_text
+                script_to_speak = gen_km
+                if enable_subtitles:
+                    subtitles_to_use = gen_vi
+        elif enable_subtitles and not subtitles_to_use:
+            with st.spinner("🤖 [1/3] AI đang tạo phụ đề tiếng Việt tương ứng..."):
+                subtitles_to_use = translate_script_with_ai(script_to_speak, to_khmer=False)
+                st.session_state.subtitle_text_km = subtitles_to_use
+                st.session_state.text_area_sub_km = subtitles_to_use
+    else:
+        script_to_speak = st.session_state.script_text_vi.strip()
+        subtitles_to_use = script_to_speak if enable_subtitles else ""
 
-    if not subtitles_to_use:
-        subtitles_to_use = script_to_speak
-        st.session_state.subtitle_text = subtitles_to_use
+        if not script_to_speak:
+            with st.spinner("🤖 [1/3] AI đang viết kịch bản phát thanh tiếng Việt..."):
+                gen_vi, _ = generate_broadcast_script(
+                    the_loai=the_loai_input,
+                    co_quan=co_quan_input,
+                    tieu_de=title_input,
+                    y_tuong=notes_input,
+                    is_khmer=False
+                )
+                st.session_state.script_text_vi = gen_vi
+                st.session_state.text_area_script_vi = gen_vi
+                st.session_state.ssml_text = text_to_ssml(gen_vi, voice_name)
+                st.session_state.text_area_ssml = st.session_state.ssml_text
+                script_to_speak = gen_vi
+                if enable_subtitles:
+                    subtitles_to_use = gen_vi
 
-    # 2. Thu âm BTV & Khởi tạo phụ đề
+    # 2. Thu âm BTV (và trích xuất phụ đề NẾU người dùng kích chọn)
     temp_audio_file = os.path.join(tempfile.gettempdir(), f"btv_voice_{voice_name.replace('-', '_')}.mp3")
     temp_ass_file = os.path.join(tempfile.gettempdir(), f"subtitles_{aspect_ratio_val.replace(':', '_')}.ass")
     temp_srt_file = os.path.join(tempfile.gettempdir(), f"subtitles_{aspect_ratio_val.replace(':', '_')}.srt")
 
-    lang_tag = "BTV Tiếng Khmer" if is_khmer else "BTV Tiếng Việt"
-    with st.spinner(f"🎙️ [2/3] Đang thu âm giọng đọc {lang_tag} & trích xuất phụ đề..."):
-        try:
-            asyncio.run(synthesize_speech_and_subtitles(
-                spoken_text=script_to_speak,
-                voice_name=voice_name,
-                subtitle_text=subtitles_to_use,
-                output_audio_path=temp_audio_file,
-                output_ass_path=temp_ass_file,
-                output_srt_path=temp_srt_file,
-                aspect_ratio=aspect_ratio_val,
-                lt_duration=4.0
-            ))
-            st.session_state.recorded_audio_path = temp_audio_file
-            st.session_state.rendered_ass_path = temp_ass_file
-            st.session_state.rendered_srt_path = temp_srt_file
-        except Exception as e:
-            st.error(f"Lỗi thu âm: {str(e)}")
-            st.stop()
+    lang_tag = "BTV Tiếng Khmer" if is_khmer else "BTV Tiếng Kinh"
+
+    if enable_subtitles:
+        with st.spinner(f"🎙️ [2/3] Đang thu âm giọng đọc {lang_tag} & tạo phụ đề tiếng Việt..."):
+            try:
+                asyncio.run(synthesize_speech_and_subtitles(
+                    spoken_text=script_to_speak,
+                    voice_name=voice_name,
+                    subtitle_text=subtitles_to_use,
+                    output_audio_path=temp_audio_file,
+                    output_ass_path=temp_ass_file,
+                    output_srt_path=temp_srt_file,
+                    aspect_ratio=aspect_ratio_val,
+                    lt_duration=4.0
+                ))
+                st.session_state.recorded_audio_path = temp_audio_file
+                st.session_state.rendered_ass_path = temp_ass_file
+                st.session_state.rendered_srt_path = temp_srt_file
+            except Exception as e:
+                st.error(f"Lỗi thu âm và tạo phụ đề: {str(e)}")
+                st.stop()
+    else:
+        with st.spinner(f"🎙️ [2/3] Đang thu âm giọng đọc {lang_tag}..."):
+            try:
+                asyncio.run(synthesize_speech(
+                    text_or_ssml=script_to_speak,
+                    output_path=temp_audio_file,
+                    voice_name=voice_name
+                ))
+                st.session_state.recorded_audio_path = temp_audio_file
+                st.session_state.rendered_ass_path = None
+                st.session_state.rendered_srt_path = None
+            except Exception as e:
+                st.error(f"Lỗi thu âm: {str(e)}")
+                st.stop()
 
     # 3. Render video
     render_progress = st.progress(0)
     render_status = st.empty()
     output_video_file = os.path.join(tempfile.gettempdir(), f"final_phong_su_{aspect_ratio_val.replace(':', '_')}.mp4")
 
-    active_sub_path = temp_ass_file if enable_subtitles else ""
+    active_sub_path = temp_ass_file if (enable_subtitles and os.path.exists(temp_ass_file)) else ""
     try:
         render_full_report_video(
             source_type=selected_source_type,
@@ -1802,6 +1900,7 @@ if render_btn:
             status_text=render_status
         )
         st.session_state.rendered_video_path = output_video_file
+        st.session_state.has_subtitles = enable_subtitles
         st.success("✅ Xuất video thành công!")
     except Exception as e:
         st.error(f"Lỗi render video: {str(e)}")
@@ -1812,8 +1911,14 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
     st.markdown(f"#### 📺 Video hoàn chỉnh ({aspect_choice.split()[0]}):")
     st.video(st.session_state.rendered_video_path)
     
-    col_dl1, col_dl2, col_dl3 = st.columns(3)
     clean_unit_filename = re.sub(r'[^a-zA-Z0-9_]', '', co_quan_input.strip().replace(' ', '_').lower()) or "co_so"
+    has_srt = st.session_state.get("has_subtitles", False) and st.session_state.rendered_srt_path and os.path.exists(st.session_state.rendered_srt_path)
+    
+    if has_srt:
+        col_dl1, col_dl2, col_dl3 = st.columns(3)
+    else:
+        col_dl1, col_dl2 = st.columns(2)
+        
     with col_dl1:
         with open(st.session_state.rendered_video_path, "rb") as vf:
             video_bytes = vf.read()
@@ -1839,8 +1944,8 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
                     use_container_width=True
                 )
 
-    with col_dl3:
-        if st.session_state.rendered_srt_path and os.path.exists(st.session_state.rendered_srt_path):
+    if has_srt:
+        with col_dl3:
             with open(st.session_state.rendered_srt_path, "rb") as sf:
                 srt_bytes = sf.read()
                 st.download_button(
@@ -1884,19 +1989,25 @@ if st.session_state.rendered_video_path and os.path.exists(st.session_state.rend
     # Tiêu đề & Hashtags
     clean_tag_unit = re.sub(r'[^a-zA-Z0-9_]', '', co_quan_input.replace(' ', '_').lower())
     hashtag_unit_str = f"#{clean_tag_unit} " if clean_tag_unit else ""
-    khmer_tags = "#khmer #truyenhinhkhmer #phudetiengviet " if is_khmer else ""
+    khmer_tags = "#khmer #truyenhinhkhmer " if is_khmer else ""
+    if is_khmer and enable_subtitles:
+        khmer_tags += "#phudetiengviet "
+
+    curr_spoken_script = st.session_state.script_text_km if is_khmer else st.session_state.script_text_vi
+    curr_sub_script = st.session_state.subtitle_text_km if is_khmer else curr_spoken_script
+    has_active_subs = st.session_state.get("has_subtitles", False)
+
+    sub_section_text = f"\n---\nPhụ đề tiếng Việt:\n{curr_sub_script}\n" if (has_active_subs and curr_sub_script) else ""
+    lang_info_str = ("Tiếng Khmer" + (" (có phụ đề tiếng Việt)" if has_active_subs else "")) if is_khmer else ("Tiếng Kinh (Tiếng Việt)" + (" (có phụ đề)" if has_active_subs else ""))
+
     auto_caption = f"""{title_input.strip() or ('ព័ត៌មានមូលដ្ឋាន' if is_khmer else 'BẢN TIN PHÓNG SỰ')}
 
 🏛️ Cơ quan thực hiện: {co_quan_input.strip() or 'Đơn vị cơ sở'}
 📺 Thể loại: {the_loai_input.strip()}
-🌐 Ngôn ngữ: {'Tiếng Khmer (có phụ đề tiếng Việt)' if is_khmer else 'Tiếng Việt'}
+🌐 Ngôn ngữ: {lang_info_str}
 
-{st.session_state.script_text}
-
----
-Phụ đề tiếng Việt:
-{st.session_state.subtitle_text}
-
+{curr_spoken_script}
+{sub_section_text}
 ---
 #phongsu #thoisu {hashtag_unit_str}{khmer_tags}#truyenhinhcoso #tintuc24h #soctrang #daidoanket #nongthonmoi #xuhuong #fyp"""
 
@@ -1909,16 +2020,22 @@ Phụ đề tiếng Việt:
         )
         st.caption("💡 Mẹo: Bấm Tải video ở trên, rồi dán nội dung này vào bài đăng.")
 
-    with st.expander("📖 Lời bình đã đọc & Phụ đề", expanded=False):
-        col_view1, col_view2 = st.columns(2)
-        with col_view1:
-            st.markdown(f"**Lời bình BTV ({'Tiếng Khmer' if is_khmer else 'Tiếng Việt'}):**")
-            st.write(st.session_state.script_text)
+    with st.expander("📖 Lời bình đã đọc" + (" & Phụ đề" if has_active_subs else ""), expanded=False):
+        if has_active_subs and is_khmer:
+            col_view1, col_view2 = st.columns(2)
+            with col_view1:
+                st.markdown("**Lời bình BTV (Tiếng Khmer):**")
+                st.write(curr_spoken_script)
+                if st.session_state.recorded_audio_path and os.path.exists(st.session_state.recorded_audio_path):
+                    st.audio(st.session_state.recorded_audio_path, format="audio/mp3")
+            with col_view2:
+                st.markdown("**Phụ đề tiếng Việt hiển thị trên video:**")
+                st.write(curr_sub_script)
+        else:
+            st.markdown(f"**Lời bình BTV ({'Tiếng Khmer' if is_khmer else 'Tiếng Kinh'}):**")
+            st.write(curr_spoken_script)
             if st.session_state.recorded_audio_path and os.path.exists(st.session_state.recorded_audio_path):
                 st.audio(st.session_state.recorded_audio_path, format="audio/mp3")
-        with col_view2:
-            st.markdown("**Phụ đề tiếng Việt hiển thị trên video:**")
-            st.write(st.session_state.subtitle_text)
 
 
 # --- Footer ---
