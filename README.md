@@ -9,7 +9,15 @@
 ## ✨ Tính Năng Nổi Bật
 
 - 🤖 **DeepSeek AI (`deepseek-chat` / `deepseek-reasoner`)**: Tự động phân tích số liệu địa phương và biên soạn bài phát thanh, lời bình phóng sự chuẩn văn phong báo nói.
-- 🎙️ **Chuẩn Hóa SSML & Giọng Đọc BTV**: Tự động ngắt nghỉ câu chuẩn phát thanh viên Nam Bộ (Nam/Nữ) qua công nghệ Edge-TTS.
+- 🎙️ **Song Ngữ Tiếng Khmer & Tiếng Việt**:
+  - Hỗ trợ giọng đọc BTV tiếng Khmer (Nam Piseth / Nữ Sreymom) chuẩn phát thanh Sóc Trăng & Nam Bộ.
+  - Hỗ trợ giọng đọc BTV tiếng Việt (Nam Nam Bộ Nam Minh / Nữ Nam Bộ Hoài My).
+  - Tự động ngắt nghỉ câu chuẩn phát thanh viên qua cấu trúc SSML và công nghệ Edge-TTS.
+  - Tự động dịch và đồng bộ kịch bản giữa tiếng Việt và tiếng Khmer.
+- 📺 **Phụ Đề Tiếng Việt Chuẩn Truyền Hình**:
+  - Tự động trích xuất timestamp và hiển thị phụ đề tiếng Việt đồng bộ chính xác với lời bình BTV (đặc biệt khi phát thanh tiếng Khmer).
+  - Đồ họa phụ đề hộp nền mờ sang trọng, tự động tránh che banner Lower-Third và giao diện mạng xã hội (TikTok/Reels).
+  - Hỗ trợ tải file phụ đề chuẩn **.srt** để đăng tải đa nền tảng.
 - 📻 **Xuất File Âm Thanh Loa Phát Thanh (.mp3)**: Tải nhanh bản tin âm thanh phục vụ truyền thanh cơ sở / loa phường xã.
 - 🎬 **Render Video Phóng Sự Truyền Hình (.mp4)**:
   - Tự động ghép chuỗi Album ảnh hoặc Video tư liệu hiện trường.
@@ -17,8 +25,8 @@
   - 🎵 **Studio Nhạc Nền Phóng Sự (BGM)**: Đa dạng phong cách truyền hình (Thời sự chính luận, Nông thôn mới, Phóng sự truyền cảm), hỗ trợ tải lên file nhạc riêng (.mp3, .wav) từ điện thoại/máy tính, nghe thử trực tiếp và tùy chỉnh mức Audio Ducking.
   - Tự động chèn đồ họa **Lower-Third** sang trọng và gắn Logo đài/đơn vị.
 - 🧹 **Nhập Liệu Thực Tế 100% (Không Dữ Liệu Giả Lập)**: Loại bỏ toàn bộ mockup cứng, hỗ trợ placeholder thông minh để cán bộ cơ sở nhập liệu trực tiếp mọi hoạt động, sự kiện tại địa phương.
-- 📱 **Giao Diện Mobile-First Tinh Gọn (Quy Trình 1-Chạm A-Z)**: Thiết kế tối ưu cho điện thoại di động (iOS & Android) trên một màn hình duy nhất, loại bỏ thao tác chuyển tab rườm rà, chống phóng to màn hình, thao tác tạo video hoàn chỉnh chỉ với 1 lần bấm.
-- 📲 **Xuất Bản Đa Kênh 1-Chạm (Zalo, Facebook, YouTube, TikTok)**:
+- 📱 **Giao Diện Mobile-First Tinh Gọn (Tự Động Hóa A-Z)**: Thiết kế tối ưu cho điện thoại di động (iOS & Android) trên một màn hình duy nhất, loại bỏ thao tác chuyển tab rườm rà, chống phóng to màn hình, thao tác tạo video hoàn chỉnh chỉ với 1 lần bấm.
+- 📲 **Xuất Bản Đa Kênh Tiện Lợi (Zalo, Facebook, YouTube, TikTok)**:
   - Mở trực tiếp **Zalo** để gửi nhanh file âm thanh phát thanh viên (.mp3) hoặc video phóng sự (.mp4) vào các nhóm chỉ đạo, nhóm công tác ấp/xã, hội đoàn thể cơ sở.
   - Hỗ trợ đăng tải lên Facebook Meta Business, YouTube Studio và TikTok Creator Studio kèm tiêu đề & hashtags tự động tạo.
 
