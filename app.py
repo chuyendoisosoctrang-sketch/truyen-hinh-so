@@ -824,13 +824,13 @@ async def synthesize_speech_and_subtitles(
         res_x, res_y = 720, 1280
         font_size = 23
         margin_v_normal = 140   # Tránh nút tương tác TikTok ở đáy màn hình
-        margin_v_intro = 250    # Nằm ngay trên Lower Third banner
+        margin_v_intro = 265    # Nằm ngay trên Lower Third banner (đã tính chiều cao banner 138px)
         max_chars = 32
     else:
         res_x, res_y = 1280, 720
         font_size = 20
         margin_v_normal = 28    # Vị trí chuẩn chân trang truyền hình
-        margin_v_intro = 155    # Nằm ngay trên Lower Third banner
+        margin_v_intro = 175    # Nằm ngay trên Lower Third banner (đã tính chiều cao banner 138px)
         max_chars = 48
 
     ass_header = f"""[Script Info]
@@ -894,6 +894,138 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 
 
+def get_khmer_compatible_fonts():
+    """
+    Tìm font hỗ trợ đầy đủ cả Tiếng Việt và Tiếng Khmer (Leelawadee UI / KhmerOS / Noto Sans Khmer).
+    Đảm bảo 100% không lỗi ô vuông (tofu) trên cả Windows và Linux (Streamlit Cloud).
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    bundled_bold = os.path.join(base_dir, "assets", "fonts", "LeelaUIb.ttf")
+    bundled_reg = os.path.join(base_dir, "assets", "fonts", "LeelawUI.ttf")
+    
+    candidate_bold_fonts = [
+        bundled_bold,
+        "C:/Windows/Fonts/LeelaUIb.ttf",
+        "C:/Windows/Fonts/khmeruib.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+        "/usr/share/fonts/truetype/khmeros/KhmerOSsys.ttf",
+        "/usr/share/fonts/truetype/khmeros/KhmerOS_sys.ttf",
+        "/usr/share/fonts/truetype/khmeros/KhmerOS.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansKhmer-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansKhmer-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    ]
+    candidate_reg_fonts = [
+        bundled_reg,
+        "C:/Windows/Fonts/LeelawUI.ttf",
+        "C:/Windows/Fonts/khmerui.ttf",
+        "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "/usr/share/fonts/truetype/khmeros/KhmerOS.ttf",
+        "/usr/share/fonts/truetype/khmeros/KhmerOSsys.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansKhmer-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansKhmer-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+    ]
+    bold_path = next((p for p in candidate_bold_fonts if os.path.exists(p)), None)
+    reg_path = next((p for p in candidate_reg_fonts if os.path.exists(p)), None)
+    return bold_path, reg_path
+
+
+def is_khmer_text(text: str) -> bool:
+    """Kiểm tra chuỗi có chứa ký tự tiếng Khmer hay không."""
+    return any('\u1780' <= c <= '\u17ff' or '\u19e0' <= c <= '\u19ff' for c in (text or ""))
+
+
+def fit_title_to_lines(text: str, max_w: int, font_path: str, is_narrow: bool = False):
+    """
+    Tự động xuống dòng tối đa 2 dòng và thu nhỏ cỡ chữ linh hoạt,
+    đảm bảo tiêu đề phóng sự không bao giờ bị tràn hoặc mất chữ (cả tiếng Việt và Khmer).
+    """
+    dummy_img = Image.new("RGBA", (1, 1))
+    draw = ImageDraw.Draw(dummy_img)
+    font_sizes = [21, 19, 17, 16, 15, 14, 13] if is_narrow else [24, 22, 20, 18, 16, 15, 14]
+    cluster_re = re.compile(r'(?:[\u1780-\u17a2](?:\u17d2[\u1780-\u17a2]|[\u17b4-\u17d3\u17dd])*|[\s\S])')
+    
+    clean_text = " ".join(text.strip().split())
+    if not clean_text:
+        font = ImageFont.truetype(font_path, font_sizes[0]) if font_path else ImageFont.load_default()
+        return font, [""], font_sizes[0]
+        
+    for fs in font_sizes:
+        font = ImageFont.truetype(font_path, fs) if font_path else ImageFont.load_default()
+        bbox = draw.textbbox((0, 0), clean_text, font=font)
+        if (bbox[2] - bbox[0]) <= max_w:
+            return font, [clean_text], fs
+            
+        words = clean_text.split(" ") if " " in clean_text else cluster_re.findall(clean_text)
+        join_char = " " if " " in clean_text else ""
+        lines = []
+        cur_line = ""
+        
+        for w in words:
+            test_line = (cur_line + join_char + w) if cur_line else w
+            t_bbox = draw.textbbox((0, 0), test_line, font=font)
+            if (t_bbox[2] - t_bbox[0]) <= max_w:
+                cur_line = test_line
+            else:
+                if cur_line:
+                    lines.append(cur_line)
+                    cur_line = w
+                else:
+                    lines.append(w)
+                    cur_line = ""
+        if cur_line:
+            lines.append(cur_line)
+            
+        if len(lines) <= 2:
+            return font, lines, fs
+            
+    # Trường hợp tiêu đề quá dài vượt mức tối đa, gói gọn vào 2 dòng an toàn
+    final_font = ImageFont.truetype(font_path, font_sizes[-1]) if font_path else ImageFont.load_default()
+    line1 = lines[0] if lines else ""
+    line2 = (" " if " " in clean_text else "").join(lines[1:]) if len(lines) > 1 else ""
+    if (draw.textbbox((0, 0), line2, font=final_font)[2] - draw.textbbox((0, 0), line2, font=final_font)[0]) > max_w:
+        clusters = cluster_re.findall(line2)
+        trimmed = ""
+        for c in clusters:
+            if (draw.textbbox((0, 0), trimmed + c + "...", font=final_font)[2] - draw.textbbox((0, 0), trimmed + c + "...", font=final_font)[0]) <= max_w:
+                trimmed += c
+            else:
+                break
+        line2 = trimmed + "..."
+    return final_font, [line1, line2], font_sizes[-1]
+
+
+def fit_single_line_text(text: str, max_w: int, font_path: str, start_size: int = 18, min_size: int = 12):
+    """Tự động thu nhỏ cỡ chữ để dòng thông tin (cơ quan thực hiện) nằm vừa vặn trên 1 dòng duy nhất."""
+    dummy_img = Image.new("RGBA", (1, 1))
+    draw = ImageDraw.Draw(dummy_img)
+    clean_text = " ".join(text.strip().split())
+    cluster_re = re.compile(r'(?:[\u1780-\u17a2](?:\u17d2[\u1780-\u17a2]|[\u17b4-\u17d3\u17dd])*|[\s\S])')
+    
+    for fs in range(start_size, min_size - 1, -1):
+        font = ImageFont.truetype(font_path, fs) if font_path else ImageFont.load_default()
+        bbox = draw.textbbox((0, 0), clean_text, font=font)
+        if (bbox[2] - bbox[0]) <= max_w:
+            return font, clean_text, fs
+            
+    font = ImageFont.truetype(font_path, min_size) if font_path else ImageFont.load_default()
+    clusters = cluster_re.findall(clean_text)
+    trimmed = ""
+    for c in clusters:
+        if (draw.textbbox((0, 0), trimmed + c + "...", font=font)[2] - draw.textbbox((0, 0), trimmed + c + "...", font=font)[0]) <= max_w:
+            trimmed += c
+        else:
+            break
+    return font, trimmed + "...", min_size
+
+
 def create_logo_badge_image(logo_path: str, sub_text: str, output_path: str):
     """
     Tạo cụm đồ họa Logo kèm dòng chữ tên đơn vị bên dưới, 
@@ -911,17 +1043,8 @@ def create_logo_badge_image(logo_path: str, sub_text: str, output_path: str):
     logo = logo.resize((target_w, target_h), Image.Resampling.LANCZOS)
     
     clean_subtext = (sub_text or "").strip()
-    
-    candidate_bold_fonts = [
-        "C:/Windows/Fonts/LeelaUIb.ttf",
-        "C:/Windows/Fonts/segoeuib.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
-    ]
-    font_path = next((p for p in candidate_bold_fonts if os.path.exists(p)), None)
-    font = ImageFont.truetype(font_path, 15) if font_path else ImageFont.load_default()
+    font_path_bold, _ = get_khmer_compatible_fonts()
+    font = ImageFont.truetype(font_path_bold, 15) if font_path_bold else ImageFont.load_default()
     
     if clean_subtext:
         dummy_img = Image.new("RGBA", (1, 1))
@@ -959,16 +1082,29 @@ def create_logo_badge_image(logo_path: str, sub_text: str, output_path: str):
     badge.save(output_path, "PNG")
 
 
-def create_lower_third_image(width: int, height: int, title: str, co_quan: str, the_loai: str, output_path: str):
-    """Tạo banner Lower-Third đồ họa truyền hình sang trọng (#003366 + Vàng Gold) dạng PNG trong suốt."""
+def create_lower_third_image(width: int, height: int, title: str, co_quan: str, the_loai: str, output_path: str, is_khmer: bool = False):
+    """
+    Tạo banner Lower-Third đồ họa truyền hình sang trọng (#003366 + Vàng Gold) dạng PNG trong suốt.
+    Hỗ trợ hiển thị hoàn hảo chữ tiếng Việt và tiếng Khmer không bị lỗi font,
+    tự động co giãn cỡ chữ và xuống dòng thông minh để không bao giờ bị mất hoặc tràn chữ.
+    """
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Tính toán kích thước phù hợp khung hình (hỗ trợ cả 16:9 và 9:16)
+    is_narrow = width < 800
     lt_w = min(1140, width - 48)
-    lt_h = 114
+    max_text_w = lt_w - 60
+    
+    font_path_bold, font_path_reg = get_khmer_compatible_fonts()
+    
+    # Xử lý tự động xuống dòng và co giãn cỡ chữ cho Tiêu đề
+    font_title, title_lines, _ = fit_title_to_lines(title, max_text_w, font_path_bold, is_narrow)
+    has_2_lines = len(title_lines) >= 2
+    
+    # Chiều cao banner linh hoạt: 114px nếu 1 dòng, 138px nếu 2 dòng tiêu đề
+    lt_h = 138 if has_2_lines else 114
     lt_x = (width - lt_w) // 2
-    bottom_pad = 110 if height > width else 28 # Tránh nút TikTok nếu video dọc
+    bottom_pad = 110 if height > width else 28  # Tránh nút TikTok nếu video dọc
     lt_y = height - lt_h - bottom_pad
     
     # Lớp đổ bóng mờ
@@ -980,44 +1116,46 @@ def create_lower_third_image(width: int, height: int, title: str, co_quan: str, 
     draw.rounded_rectangle(main_box, radius=14, fill=(0, 42, 86, 235), outline=(255, 193, 7, 245), width=3)
     
     # Dải đỏ tin tức bên trái
-    draw.rounded_rectangle([lt_x, lt_y, lt_x + 18, lt_y + lt_h], radius=7, fill=(217, 4, 41, 255))
+    draw.rounded_rectangle([lt_x, lt_y, lt_x + 16, lt_y + lt_h], radius=7, fill=(217, 4, 41, 255))
     
     # Tag thể loại nhỏ trên đầu
-    tag_box = [lt_x + 28, lt_y + 12, lt_x + 28 + len(the_loai.upper()) * 11 + 24, lt_y + 34]
-    draw.rounded_rectangle(tag_box, radius=4, fill=(255, 184, 0, 255))
-    
-    candidate_bold_fonts = [
-        "C:/Windows/Fonts/LeelaUIb.ttf",
-        "C:/Windows/Fonts/segoeuib.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
-    ]
-    candidate_reg_fonts = [
-        "C:/Windows/Fonts/LeelawUI.ttf",
-        "C:/Windows/Fonts/segoeui.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
-    ]
-    font_path_bold = next((p for p in candidate_bold_fonts if os.path.exists(p)), None)
-    font_path_reg = next((p for p in candidate_reg_fonts if os.path.exists(p)), None)
-    
     font_tag = ImageFont.truetype(font_path_bold, 13) if font_path_bold else ImageFont.load_default()
-    font_title = ImageFont.truetype(font_path_bold, 22 if width < 800 else 24) if font_path_bold else ImageFont.load_default()
-    font_sub = ImageFont.truetype(font_path_reg, 17 if width < 800 else 19) if font_path_reg else ImageFont.load_default()
+    tag_clean = the_loai.upper() if not (is_khmer or is_khmer_text(the_loai)) else the_loai
+    t_bbox = draw.textbbox((0, 0), tag_clean, font=font_tag)
+    tag_w = (t_bbox[2] - t_bbox[0]) + 18
+    tag_box = [lt_x + 28, lt_y + 11, lt_x + 28 + tag_w, lt_y + 31]
+    draw.rounded_rectangle(tag_box, radius=4, fill=(255, 184, 0, 255))
+    draw.text((lt_x + 37, lt_y + 20), tag_clean, fill=(0, 32, 64), font=font_tag, anchor="lm")
     
-    draw.text((lt_x + 36, lt_y + 23), the_loai.upper(), fill=(0, 32, 64), font=font_tag, anchor="lm")
+    # Xử lý dòng Cơ quan thực hiện (tự động co giãn để không bị tràn màn hình)
+    clean_co_quan = (co_quan or "").strip()
+    is_km_active = is_khmer or is_khmer_text(clean_co_quan) or is_khmer_text(title)
+    if is_km_active:
+        prefix = "អង្គភាពអនុវត្ត: "
+        if clean_co_quan.startswith("អង្គភាពអនុវត្ត:") or clean_co_quan.startswith("Cơ quan thực hiện:"):
+            full_agency = clean_co_quan
+        else:
+            full_agency = f"{prefix}{clean_co_quan}" if clean_co_quan else prefix.strip()
+    else:
+        prefix = "Cơ quan thực hiện: "
+        if clean_co_quan.startswith("Cơ quan thực hiện:") or clean_co_quan.startswith("អង្គភាពអនុវត្ត:"):
+            full_agency = clean_co_quan
+        else:
+            full_agency = f"{prefix}{clean_co_quan}" if clean_co_quan else prefix.strip()
+            
+    font_sub, agency_display, _ = fit_single_line_text(
+        full_agency, max_text_w, font_path_reg, 18 if not is_narrow else 16, 12
+    )
     
-    max_title_chars = 48 if width < 800 else 65
-    display_title = title if len(title) <= max_title_chars else title[:max_title_chars-3] + "..."
-    draw.text((lt_x + 28, lt_y + 54), display_title, fill=(255, 255, 255), font=font_title, anchor="lm")
-    
-    sub_text = f"Cơ quan thực hiện: {co_quan}"
-    draw.text((lt_x + 28, lt_y + 88), sub_text, fill=(255, 215, 0), font=font_sub, anchor="lm")
-    
+    # Vẽ Tiêu đề và Tên Cơ quan
+    if has_2_lines:
+        draw.text((lt_x + 28, lt_y + 52), title_lines[0], fill=(255, 255, 255), font=font_title, anchor="lm")
+        draw.text((lt_x + 28, lt_y + 78), title_lines[1], fill=(255, 255, 255), font=font_title, anchor="lm")
+        draw.text((lt_x + 28, lt_y + 110), agency_display, fill=(255, 215, 0), font=font_sub, anchor="lm")
+    else:
+        draw.text((lt_x + 28, lt_y + 56), title_lines[0], fill=(255, 255, 255), font=font_title, anchor="lm")
+        draw.text((lt_x + 28, lt_y + 90), agency_display, fill=(255, 215, 0), font=font_sub, anchor="lm")
+        
     img.save(output_path, "PNG")
 
 
@@ -1151,7 +1289,8 @@ def render_full_report_video(
     ass_subtitle_path: str = "",
     output_video_path: str = "",
     progress_bar = None,
-    status_text = None
+    status_text = None,
+    is_khmer: bool = False
 ):
     """
     Quy trình Render Video Phóng sự Hoàn Chỉnh:
@@ -1184,7 +1323,7 @@ def render_full_report_video(
             progress_bar.progress(35)
             
         lt_image_path = os.path.join(tmpdir, "lower_third.png")
-        create_lower_third_image(out_w, out_h, title, co_quan, the_loai, lt_image_path)
+        create_lower_third_image(out_w, out_h, title, co_quan, the_loai, lt_image_path, is_khmer=is_khmer)
         
         logo_badge_path = os.path.join(tmpdir, "logo_badge.png")
         create_logo_badge_image(logo_path, logo_subtext, logo_badge_path)
@@ -1970,7 +2109,7 @@ if render_btn:
             logo_subtext=logo_subtext_input,
             logo_position=logo_pos_val,
             title=((st.session_state.title_km.strip() if (is_khmer and st.session_state.title_km.strip()) else title_input.strip()) or ("ព័ត៌មានមូលដ្ឋាន" if is_khmer else "BẢN TIN CƠ SỞ")),
-            co_quan=co_quan_input.strip() or "ĐƠN VỊ CƠ SỞ",
+            co_quan=co_quan_input.strip() or ("អង្គភាពមូលដ្ឋាន" if is_khmer else "ĐƠN VỊ CƠ SỞ"),
             the_loai=("ព័ត៌មាន" if is_khmer else (the_loai_input.strip() or "THỜI SỰ")),
             aspect_ratio=aspect_ratio_val,
             vfx_style=vfx_choice,
@@ -1978,7 +2117,8 @@ if render_btn:
             ass_subtitle_path=active_sub_path,
             output_video_path=output_video_file,
             progress_bar=render_progress,
-            status_text=render_status
+            status_text=render_status,
+            is_khmer=is_khmer
         )
         st.session_state.rendered_video_path = output_video_file
         st.session_state.has_subtitles = enable_subtitles
